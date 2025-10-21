@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authMiddleware from './middlewares/auth.middleware';
 import authRouter from './routes/auth.route';
+import { config } from './utils/config';
 
 dotenv.config();
 
@@ -31,7 +32,11 @@ app.use(morgan('dev'));
 
 app.use(
     cors({
-        origin: ['http://localhost:3000', 'https://handbookk.vercel.app'],
+        origin: [
+            'http://localhost:3000',
+            'https://handbookk.vercel.app',
+            config.clientUrl,
+        ],
         credentials: true,
     })
 );

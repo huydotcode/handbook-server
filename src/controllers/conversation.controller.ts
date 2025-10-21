@@ -18,7 +18,10 @@ class ConversationController {
                     $elemMatch: { $eq: user_id },
                 },
             })
-                .populate('participants', POPULATE_USER + ' lastAccessed')
+                .populate(
+                    'participants',
+                    POPULATE_USER + ' lastAccessed isOnline'
+                )
                 .populate('creator', POPULATE_USER)
                 .populate({
                     path: 'lastMessage',
@@ -38,8 +41,8 @@ class ConversationController {
                     path: 'group',
                     populate: [
                         { path: 'avatar' },
-                        { path: 'members.user' },
-                        { path: 'creator' },
+                        { path: 'members.user', select: POPULATE_USER },
+                        { path: 'creator', select: POPULATE_USER },
                     ],
                 });
 
@@ -77,7 +80,10 @@ class ConversationController {
             const conversation = (await Conversation.findOne({
                 _id: conversation_id,
             })
-                .populate('participants', POPULATE_USER + ' lastAccessed')
+                .populate(
+                    'participants',
+                    POPULATE_USER + ' lastAccessed isOnline'
+                )
                 .populate('creator', POPULATE_USER)
                 .populate({
                     path: 'lastMessage',
@@ -97,8 +103,8 @@ class ConversationController {
                     path: 'group',
                     populate: [
                         { path: 'avatar' },
-                        { path: 'members.user' },
-                        { path: 'creator' },
+                        { path: 'members.user', select: POPULATE_USER },
+                        { path: 'creator', select: POPULATE_USER },
                     ],
                 })) as IConversation;
 
