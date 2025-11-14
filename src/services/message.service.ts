@@ -47,9 +47,6 @@ export class MessageService extends BaseService<IMessageModel> {
     }
 
     /**
-     * Get paginated messages for a conversation ensuring user access.
-     */
-    /**
      * Retrieve paginated messages for a conversation with access control.
      */
     async getConversationMessages(
@@ -71,9 +68,6 @@ export class MessageService extends BaseService<IMessageModel> {
     }
 
     /**
-     * Get pinned messages inside a conversation.
-     */
-    /**
      * Retrieve pinned messages for a conversation with pagination.
      */
     async getPinnedConversationMessages(
@@ -94,9 +88,6 @@ export class MessageService extends BaseService<IMessageModel> {
         );
     }
 
-    /**
-     * Search messages by keyword within a conversation.
-     */
     /**
      * Search messages by keyword inside a conversation.
      */
@@ -137,20 +128,12 @@ export class MessageService extends BaseService<IMessageModel> {
             .exec();
 
         if (!conversation) {
-            throw new NotFoundError('Conversation not found');
+            throw new NotFoundError(
+                `Conversation not found or user is not a participant`
+            );
         }
 
         return conversation;
-    }
-
-    /**
-     * Normalize pagination params to safe bounds.
-     */
-    private normalizePagination(page: number, pageSize: number) {
-        return {
-            currentPage: Math.max(1, page || 1),
-            currentPageSize: Math.max(1, pageSize || 10),
-        };
     }
 
     /**

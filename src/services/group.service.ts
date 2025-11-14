@@ -1,6 +1,6 @@
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
-import { IGroupModel } from '../models/group.model';
+import { IGroupModel, EGroupUserRole } from '../models/group.model';
 import { GroupRepository } from '../repositories/group.repository';
 import { BaseService } from './base.service';
 
@@ -34,7 +34,7 @@ export class GroupService extends BaseService<IGroupModel> {
             data.members = [
                 {
                     user: userId,
-                    role: 'ADMIN',
+                    role: EGroupUserRole.ADMIN,
                 },
             ];
         }
@@ -195,7 +195,7 @@ export class GroupService extends BaseService<IGroupModel> {
     async updateMemberRole(
         groupId: string,
         userId: string,
-        role: 'MEMBER' | 'ADMIN'
+        role: EGroupUserRole
     ) {
         this.validateId(groupId);
         this.validateId(userId);

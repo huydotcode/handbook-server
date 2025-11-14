@@ -7,6 +7,7 @@ import {
 import {
     IConversationInput,
     IConversationModel,
+    EConversationType,
 } from '../models/conversation.model';
 import { ConversationRepository } from '../repositories/conversation.repository';
 import { PaginationParams, PaginationResult } from '../common/types/base';
@@ -40,7 +41,7 @@ export class ConversationService extends BaseService<IConversationModel> {
 
             // Set default type if not provided
             if (!data.type) {
-                (data as any).type = 'private';
+                data.type = EConversationType.PRIVATE;
             }
 
             const conversation = await this.create(data, userId);
@@ -120,7 +121,7 @@ export class ConversationService extends BaseService<IConversationModel> {
             }
 
             // Check if user is participant (for private conversations)
-            if (conversation.type === 'private') {
+            if (conversation.type === EConversationType.PRIVATE) {
                 const isParticipant =
                     await this.conversationRepository.isParticipant(
                         conversationId,

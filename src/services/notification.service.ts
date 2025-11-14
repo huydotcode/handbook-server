@@ -178,11 +178,4 @@ export class NotificationService extends BaseService<INotificationModel> {
             }
         );
     }
-
-    private normalizePagination(page: number, pageSize: number) {
-        return {
-            currentPage: Math.max(1, page || 1),
-            currentPageSize: Math.max(1, pageSize || 10),
-        };
-    }
 }

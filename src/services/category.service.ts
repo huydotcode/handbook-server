@@ -11,7 +11,7 @@ export class CategoryService extends BaseService<ICategoryModel> {
     constructor() {
         const repository = new CategoryRepository();
         super(repository);
-        this.categoryRepository = new CategoryRepository();
+        this.categoryRepository = repository;
     }
 
     /**

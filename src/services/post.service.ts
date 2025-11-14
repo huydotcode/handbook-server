@@ -1,13 +1,14 @@
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
-import { POPULATE_USER } from '../common/utils/populate';
-import Follows from '../models/follow.model';
 import PostInteraction, {
     EPostInteractionType,
 } from '../models/post-interaction.model';
-import { IPostModel, IPostWithInteraction } from '../models/post.model';
-import User from '../models/user.model';
+import {
+    IPostModel,
+    IPostWithInteraction,
+    EPostStatus,
+} from '../models/post.model';
 import { PostRepository } from '../repositories/post.repository';
 import { BaseService } from './base.service';
 import { FollowService } from './follow.service';
@@ -35,7 +36,10 @@ export class PostService extends BaseService<IPostModel> {
      * @param userId - User ID performing the action
      * @returns Created post
      */
-    async createPost(data: any, userId: string) {
+    async createPost(
+        data: Partial<IPostModel>,
+        userId: string
+    ): Promise<IPostModel> {
         // Validate required fields
         this.validateRequiredFields(data, ['author']);
 
@@ -49,13 +53,22 @@ export class PostService extends BaseService<IPostModel> {
      * @param userId - User ID performing the action
      * @returns Updated post
      */
-    async updatePost(id: string, data: any, userId: string) {
+    async updatePost(
+        id: string,
+        data: Partial<IPostModel>,
+        userId: string
+    ): Promise<IPostModel> {
         this.validateId(id);
 
         // Don't allow changing author
         delete data.author;
 
-        return await this.update(id, data, userId);
+        const updated = await this.update(id, data, userId);
+        if (!updated) {
+            throw new NotFoundError(`Post not found with id: ${id}`);
+        }
+
+        return updated;
     }
 
     /**
@@ -63,12 +76,12 @@ export class PostService extends BaseService<IPostModel> {
      * @param authorId - Author ID
      * @returns Array of posts
      */
-    async getPostsByAuthor(authorId: string) {
+    async getPostsByAuthor(authorId: string): Promise<IPostModel[]> {
         this.validateId(authorId, 'Author ID');
         return await this.postRepository.findManyWithSort(
             {
                 author: authorId,
-                status: 'ACTIVE',
+                status: EPostStatus.ACTIVE,
             },
             { createdAt: -1 }
         );
@@ -79,12 +92,12 @@ export class PostService extends BaseService<IPostModel> {
      * @param groupId - Group ID
      * @returns Array of posts
      */
-    async getPostsByGroup(groupId: string) {
+    async getPostsByGroup(groupId: string): Promise<IPostModel[]> {
         this.validateId(groupId, 'Group ID');
         return await this.postRepository.findManyWithSort(
             {
                 group: groupId,
-                status: 'ACTIVE',
+                status: EPostStatus.ACTIVE,
             },
             { createdAt: -1 }
         );
@@ -95,18 +108,17 @@ export class PostService extends BaseService<IPostModel> {
      * @param searchTerm - Search term
      * @returns Array of posts
      */
-    async searchPosts(searchTerm: string) {
+    async searchPosts(searchTerm: string): Promise<IPostModel[]> {
         if (!searchTerm || searchTerm.trim().length < 2) {
             throw new AppError(
                 'Search term must be at least 2 characters',
-                HTTP_STATUS.BAD_REQUEST,
-                'VALID_012'
+                HTTP_STATUS.BAD_REQUEST
             );
         }
 
         return await this.postRepository.findMany({
             $text: { $search: searchTerm },
-            status: 'ACTIVE',
+            status: EPostStatus.ACTIVE,
         });
     }
 
@@ -115,19 +127,15 @@ export class PostService extends BaseService<IPostModel> {
      * @param tags - Array of tags
      * @returns Array of posts
      */
-    async getPostsByTags(tags: string[]) {
+    async getPostsByTags(tags: string[]): Promise<IPostModel[]> {
         if (!tags || tags.length === 0) {
-            throw new AppError(
-                'Tags are required',
-                HTTP_STATUS.BAD_REQUEST,
-                'VALID_013'
-            );
+            throw new AppError('Tags are required', HTTP_STATUS.BAD_REQUEST);
         }
 
         return await this.postRepository.findManyWithSort(
             {
                 tags: { $in: tags },
-                status: 'ACTIVE',
+                status: EPostStatus.ACTIVE,
             },
             { createdAt: -1 }
         );
@@ -203,29 +211,46 @@ export class PostService extends BaseService<IPostModel> {
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
         this.validateId(userId, 'User ID');
+        this.validatePagination(page, pageSize);
 
-        const user = await User.findById(userId).populate(POPULATE_USER);
-        if (!user) {
-            throw new NotFoundError(`User not found with id: ${userId}`);
+        const user = await this.userService.getByIdOrThrow(userId);
+        const followings = await this.followService.getFollowing(userId);
+
+        const followingIds = followings.map((f) =>
+            typeof f.following === 'string'
+                ? f.following
+                : f.following.toString()
+        );
+        const friendIds = (user.friends || []).map((f) =>
+            typeof f === 'string' ? f : f.toString()
+        );
+
+        // Handle empty arrays
+        if (followingIds.length === 0 && friendIds.length === 0) {
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    total: 0,
+                    totalPages: 0,
+                    hasNext: false,
+                    hasPrev: false,
+                },
+            };
         }
-
-        const followings = await Follows.find({
-            follower: userId,
-        })
-            .select('following')
-            .lean();
 
         const filters = {
             $or: [
                 {
                     author: {
-                        $in: followings.map((f) => f.following),
+                        $in: followingIds,
                     },
                     option: 'public',
                 },
                 {
                     author: {
-                        $in: user?.friends || [],
+                        $in: friendIds,
                     },
                     option: {
                         $in: ['friends', 'public'],
@@ -255,16 +280,29 @@ export class PostService extends BaseService<IPostModel> {
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
         this.validateId(userId, 'User ID');
+        this.validatePagination(page, pageSize);
 
-        const user = await User.findById(userId).populate(POPULATE_USER);
-        if (!user) {
-            throw new NotFoundError(`User not found with id: ${userId}`);
+        const user = await this.userService.getByIdOrThrow(userId);
+        const friendIds = (user.friends || []).map((f) => f.toString());
+
+        if (friendIds.length === 0) {
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    total: 0,
+                    totalPages: 0,
+                    hasNext: false,
+                    hasPrev: false,
+                },
+            };
         }
 
         return await this.postRepository.findManyWithInteraction(
             {
                 author: {
-                    $in: user?.friends || [],
+                    $in: friendIds,
                 },
             },
             userId,
@@ -286,18 +324,31 @@ export class PostService extends BaseService<IPostModel> {
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
         this.validateId(userId, 'User ID');
+        this.validatePagination(page, pageSize);
 
-        const user = await User.findById(userId).populate(POPULATE_USER);
-        if (!user) {
-            throw new NotFoundError(`User not found with id: ${userId}`);
+        const user = await this.userService.getByIdOrThrow(userId);
+        const groupIds = (user.groups || []).map((g) => g.toString());
+
+        if (groupIds.length === 0) {
+            return {
+                data: [],
+                pagination: {
+                    page,
+                    pageSize,
+                    total: 0,
+                    totalPages: 0,
+                    hasNext: false,
+                    hasPrev: false,
+                },
+            };
         }
 
         return await this.postRepository.findManyWithInteraction(
             {
                 group: {
-                    $in: user?.groups || [],
+                    $in: groupIds,
                 },
-                status: 'active',
+                status: EPostStatus.ACTIVE,
             },
             userId,
             page,
@@ -318,9 +369,12 @@ export class PostService extends BaseService<IPostModel> {
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
         this.validateId(userId, 'User ID');
+        this.validatePagination(page, pageSize);
 
-        const currentPage = Math.max(1, page || 1);
-        const currentPageSize = Math.max(1, pageSize || 10);
+        const { currentPage, currentPageSize } = this.normalizePagination(
+            page,
+            pageSize
+        );
         const skip = (currentPage - 1) * currentPageSize;
 
         const [interactions, total] = await Promise.all([

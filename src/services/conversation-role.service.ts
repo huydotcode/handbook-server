@@ -19,7 +19,11 @@ export class ConversationRoleService extends BaseService<IConversationRoleModel>
      */
     async createConversationRole(data: any, userId: string) {
         // Validate required fields
-        this.validateRequiredFields(data, ['name']);
+        this.validateRequiredFields(data, [
+            'conversationId',
+            'userIds',
+            'role',
+        ]);
 
         return await this.create(data, userId);
     }
@@ -37,11 +41,11 @@ export class ConversationRoleService extends BaseService<IConversationRoleModel>
     }
 
     /**
-     * Get role by name
-     * @param name - Role name
-     * @returns Role or null
+     * Get roles by role value
+     * @param role - Role value (admin or member)
+     * @returns Array of roles
      */
-    async getRoleByName(name: string) {
-        return await this.conversationRoleRepository.findOne({ name });
+    async getRolesByRole(role: string) {
+        return await this.conversationRoleRepository.findMany({ role });
     }
 }

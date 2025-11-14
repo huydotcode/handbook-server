@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
+import { PaginationResult } from '../common/types/base';
 import { IUserModel } from '../models/user.model';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
@@ -17,7 +18,10 @@ export class UserService extends BaseService<IUserModel> {
     /**
      * Create a new user.
      */
-    async createUser(data: any, userId: string) {
+    async createUser(
+        data: Partial<IUserModel>,
+        userId: string
+    ): Promise<IUserModel> {
         // Validate required fields
         this.validateRequiredFields(data, ['email', 'name', 'avatar']);
 
@@ -38,7 +42,11 @@ export class UserService extends BaseService<IUserModel> {
     /**
      * Update an existing user.
      */
-    async updateUser(id: string, data: any, userId: string) {
+    async updateUser(
+        id: string,
+        data: Partial<IUserModel>,
+        userId: string
+    ): Promise<IUserModel> {
         this.validateId(id);
 
         // Hash password if being updated
@@ -47,7 +55,12 @@ export class UserService extends BaseService<IUserModel> {
             data.password = await bcrypt.hash(data.password, 10);
         }
 
-        return await this.update(id, data, userId);
+        const updated = await this.update(id, data, userId);
+        if (!updated) {
+            throw new NotFoundError(`User not found with id: ${id}`);
+        }
+
+        return updated;
     }
 
     /**
@@ -120,16 +133,16 @@ export class UserService extends BaseService<IUserModel> {
     /**
      * Retrieve users with pagination metadata.
      */
-    async getUsersWithPagination(params: { page: number; pageSize: number }) {
-        const page = Math.max(1, params.page || 1);
-        const pageSize = Math.max(1, params.pageSize || 10);
+    async getUsersWithPagination(params: {
+        page: number;
+        pageSize: number;
+    }): Promise<PaginationResult<IUserModel>> {
+        this.validatePagination(params.page, params.pageSize);
 
-        const { data, pagination } = await this.userRepository.findPaginated(
-            page,
-            pageSize
+        return await this.userRepository.findPaginated(
+            params.page,
+            params.pageSize
         );
-
-        return { data, pagination };
     }
 
     /**

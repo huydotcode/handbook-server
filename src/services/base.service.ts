@@ -296,6 +296,32 @@ export abstract class BaseService<T extends Document> {
     }
 
     /**
+     * Normalize pagination parameters to safe bounds
+     * @param page - Page number (optional)
+     * @param pageSize - Page size (optional)
+     * @returns Normalized pagination parameters
+     */
+    protected normalizePagination(
+        page?: number,
+        pageSize?: number
+    ): {
+        currentPage: number;
+        currentPageSize: number;
+    } {
+        const parsedPage = Number(page);
+        const parsedSize = Number(pageSize);
+
+        const currentPage =
+            Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+        const normalizedSize =
+            Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 10;
+        const currentPageSize = Math.min(normalizedSize, 100);
+
+        return { currentPage, currentPageSize };
+    }
+
+    /**
      * Log activity for audit purposes
      * @param userId - User ID performing the action
      * @param action - Action performed
