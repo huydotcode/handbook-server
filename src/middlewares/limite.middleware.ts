@@ -1,8 +1,8 @@
 import rateLimit from 'express-rate-limit';
 import RedisStore, { RedisReply } from 'rate-limit-redis';
-import redis from '../services/redis';
+import redis from '../common/utils/redis';
 
-const limiteMiddlware = rateLimit({
+const limiteMiddleware = rateLimit({
     store: new RedisStore({
         sendCommand: (...args: string[]) =>
             redis.call(
@@ -14,4 +14,4 @@ const limiteMiddlware = rateLimit({
     message: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.',
 });
 
-export default limiteMiddlware;
+export default limiteMiddleware;
