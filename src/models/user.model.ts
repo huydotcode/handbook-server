@@ -1,4 +1,6 @@
+import * as bcrypt from 'bcrypt';
 import {
+    Document,
     Schema,
     Types,
     deleteModel,
@@ -6,29 +8,47 @@ import {
     modelNames,
     models,
 } from 'mongoose';
-import * as bcrypt from 'bcrypt';
 
-interface IUserModel {
-    isModified(arg0: string): unknown;
-    name: string;
-    username: string;
+export interface IUserModel extends Document {
+    _id: string;
     email: string;
+    username: string;
+    name: string;
     avatar: string;
-    password: string;
-    role: string;
+    role: EUserRole;
     givenName: string;
     familyName: string;
     locale: string;
     friends: Types.ObjectId[];
     groups: Types.ObjectId[];
     followersCount: number;
-
     isOnline: boolean;
     isBlocked: boolean;
     isVerified: boolean;
-
+    password: string;
     lastAccessed: Date;
-    comparePassword(arg0: string): Promise<boolean>;
+    createdAt: Date;
+    updatedAt: Date;
+    comparePassword(password: string): Promise<boolean>;
+}
+
+export interface IUserInput {
+    email: string;
+    username: string;
+    name: string;
+    avatar: string;
+    role: EUserRole;
+}
+
+export interface IUserOutput extends IUserInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum EUserRole {
+    ADMIN = 'admin',
+    USER = 'user',
 }
 
 const UserSchema = new Schema<IUserModel>(
@@ -52,8 +72,8 @@ const UserSchema = new Schema<IUserModel>(
         },
         role: {
             type: String,
-            enum: ['admin', 'user'],
-            default: 'user',
+            enum: Object.values(EUserRole),
+            default: EUserRole.USER,
         },
         isOnline: {
             type: Boolean,
@@ -68,9 +88,18 @@ const UserSchema = new Schema<IUserModel>(
             default: false,
         },
         password: String,
-        givenName: String,
-        familyName: String,
-        locale: String,
+        givenName: {
+            type: String,
+            default: '',
+        },
+        familyName: {
+            type: String,
+            default: '',
+        },
+        locale: {
+            type: String,
+            default: '',
+        },
         friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
         groups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
         followersCount: {
@@ -110,6 +139,6 @@ UserSchema.pre('save', async function (next) {
     next();
 });
 
-const User = models.user || model<IUserModel>('User', UserSchema);
+const User = models.User || model<IUserModel>('User', UserSchema);
 
 export default User;

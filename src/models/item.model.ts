@@ -1,19 +1,36 @@
-import { Schema, model, models } from 'mongoose';
+import { Document, Schema, Types, model, models } from 'mongoose';
 
-interface IItemModel {
+export interface IItemModel extends Document {
+    _id: string;
     name: string;
-    seller: Schema.Types.ObjectId;
+    seller: Types.ObjectId;
     description: string;
     price: number;
-    images: Schema.Types.ObjectId[];
-    location: Schema.Types.ObjectId;
-    category: Schema.Types.ObjectId;
+    images: Types.ObjectId[];
+    location: Types.ObjectId;
+    category: Types.ObjectId;
     slug: string;
     status: string;
-    attributes: {
-        name: string;
-        value: string;
-    }[];
+    attributes: { name: string; value: string }[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IItemInput {
+    name: string;
+    seller: Types.ObjectId;
+    description: string;
+    price: number;
+    images: Types.ObjectId[];
+    location: Types.ObjectId;
+    category: Types.ObjectId;
+    slug: string;
+    status: string;
+    attributes: { name: string; value: string }[];
+}
+
+export interface IItemOutput extends IItemInput {
+    _id: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -39,7 +56,7 @@ export const ItemSchema = new Schema<IItemModel>(
         },
         images: [
             {
-                type: Schema.Types.ObjectId,
+                type: Types.ObjectId,
                 ref: 'Media',
             },
         ],

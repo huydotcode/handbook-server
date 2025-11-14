@@ -1,8 +1,20 @@
-import { model, models, Schema, Types } from 'mongoose';
+import { Document, model, models, Schema, Types } from 'mongoose';
 
-interface IFollowsModel {
-    follower: Types.ObjectId; // người theo dõi
-    following: Types.ObjectId; // người được theo dõi
+export interface IFollowsModel extends Document {
+    _id: string;
+    follower: Types.ObjectId;
+    following: Types.ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IFollowsInput {
+    follower: Types.ObjectId;
+    following: Types.ObjectId;
+}
+
+export interface IFollowsOutput extends IFollowsInput {
+    _id: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,29 +38,6 @@ const FollowsSchema = new Schema<IFollowsModel>(
 // Index
 FollowsSchema.index({ follower: 1, following: 1 }, { unique: true });
 
-FollowsSchema.pre<IFollowsModel>('save', function (next) {
-    // khi tạo mới một Follows thì cập nhật folloersCount của user của người được theo dõi
-    models.User.findByIdAndUpdate(
-        this.following,
-        { $inc: { followingCount: 1 } },
-        { new: true }
-    ).exec();
+const Follow = models.Follow || model<IFollowsModel>('Follow', FollowsSchema);
 
-    next();
-});
-
-FollowsSchema.pre<IFollowsModel>('deleteOne', function (next) {
-    // khi xóa một Follows thì cập nhật folloersCount của user
-    models.User.findByIdAndUpdate(
-        this.following,
-        { $inc: { followingCount: -1 } },
-        { new: true }
-    ).exec();
-
-    next();
-});
-
-const Follows =
-    models.Follows || model<IFollowsModel>('Follows', FollowsSchema);
-
-export default Follows;
+export default Follow;

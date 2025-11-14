@@ -1,10 +1,24 @@
-import { model, models, Schema, Types } from 'mongoose';
+import { Document, model, models, Schema, Types } from 'mongoose';
 
-interface IConversationRoleModel {
+export interface IConversationRoleModel extends Document {
+    _id: string;
     conversationId: Types.ObjectId;
     userIds: Types.ObjectId[];
     role: string;
     createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IConversationRoleInput {
+    conversationId: Types.ObjectId;
+    userIds: Types.ObjectId[];
+    role: string;
+}
+
+export interface IConversationRoleOutput extends IConversationRoleInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const ConversationRoleSchema = new Schema<IConversationRoleModel>(

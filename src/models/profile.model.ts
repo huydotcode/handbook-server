@@ -1,6 +1,19 @@
-import { Schema, Types, model, models } from 'mongoose';
+import { Document, Schema, Types, model, models } from 'mongoose';
 
-interface IProfileModel {
+export interface IProfileModel extends Document {
+    _id: string;
+    user: Types.ObjectId;
+    coverPhoto: string;
+    bio: string;
+    work: string;
+    education: string;
+    location: string;
+    dateOfBirth: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IProfileInput {
     user: Types.ObjectId;
     coverPhoto: string;
     bio: string;
@@ -10,6 +23,12 @@ interface IProfileModel {
     dateOfBirth: Date;
 }
 
+export interface IProfileOutput extends IProfileInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 const ProfileSchema = new Schema<IProfileModel>(
     {
         user: {
@@ -17,12 +36,30 @@ const ProfileSchema = new Schema<IProfileModel>(
             ref: 'User',
             required: true,
         },
-        coverPhoto: String,
-        bio: String,
-        work: String,
-        education: String,
-        location: String,
-        dateOfBirth: Date,
+        coverPhoto: {
+            type: String,
+            default: '',
+        },
+        bio: {
+            type: String,
+            default: '',
+        },
+        work: {
+            type: String,
+            default: '',
+        },
+        education: {
+            type: String,
+            default: '',
+        },
+        location: {
+            type: String,
+            default: '',
+        },
+        dateOfBirth: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,

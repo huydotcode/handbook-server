@@ -1,7 +1,14 @@
-import { Schema, Types, model, models } from 'mongoose';
-import { NotificationType } from '../enums/NotificationType';
+import { Document, Schema, Types, model, models } from 'mongoose';
 
-interface INotificationModel {
+export enum ENotificationType {
+    REQUEST_ADD_FRIEND = 'request-add-friend',
+    ACCEPT_FRIEND_REQUEST = 'accept-friend-request',
+    REJECT_FRIEND_REQUEST = 'reject-friend-request',
+    MESSAGE = 'message',
+}
+
+export interface INotificationModel extends Document {
+    _id: string;
     sender: Types.ObjectId;
     receiver: Types.ObjectId;
     extra?: {
@@ -15,15 +22,39 @@ interface INotificationModel {
     };
     isRead: boolean;
     isDeleted: boolean;
-    type: NotificationType;
+    type: ENotificationType;
     deletedAt?: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface INotificationInput {
+    sender: Types.ObjectId;
+    receiver: Types.ObjectId;
+    extra?: {
+        postId?: Types.ObjectId;
+        commentId?: Types.ObjectId;
+        groupId?: Types.ObjectId;
+        messageId?: Types.ObjectId;
+        notificationId?: Types.ObjectId;
+    };
+    isRead: boolean;
+    isDeleted: boolean;
+    type: ENotificationType;
+    deletedAt?: Date | null;
+}
+
+export interface INotificationOutput extends INotificationInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const NotificationSchema = new Schema<INotificationModel>(
     {
         type: {
             type: String,
-            enum: Object.values(NotificationType),
+            enum: Object.values(ENotificationType),
             required: true,
         },
         sender: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -66,6 +97,7 @@ NotificationSchema.index({ sender: 1 }); // Index for notifications by sender
 NotificationSchema.index({ receiver: 1 }); // Index for notifications by receiver
 NotificationSchema.index({ receiver: 1, isRead: 1 });
 NotificationSchema.index({ receiver: 1, createdAt: -1 });
+NotificationSchema.index({ sender: 1, type: 1 });
 
 const Notification =
     models.Notification ||

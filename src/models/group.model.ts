@@ -1,20 +1,45 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, Types, Document } from 'mongoose';
 
-interface GroupMember {
-    user: Schema.Types.ObjectId;
-    role: string;
+export enum EGroupUserRole {
+    MEMBER = 'MEMBER',
+    ADMIN = 'ADMIN',
 }
 
-interface IGroupModel {
+export interface IGroupMember {
+    user: Types.ObjectId;
+    role: EGroupUserRole;
+}
+
+export interface IGroupModel extends Document {
+    _id: string;
     name: string;
     description: string;
-    avatar: Schema.Types.ObjectId;
-    members: GroupMember[];
-    creator: Schema.Types.ObjectId;
+    avatar: Types.ObjectId;
+    members: IGroupMember[];
+    creator: Types.ObjectId;
     coverPhoto: string;
     type: string;
     introduction: string;
     lastActivity: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IGroupInput {
+    name: string;
+    description: string;
+    avatar: Types.ObjectId;
+    members: IGroupMember[];
+    creator: Types.ObjectId;
+    coverPhoto: string;
+    type: string;
+    introduction: string;
+}
+
+export interface IGroupOutput extends IGroupInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const GroupSchema = new Schema<IGroupModel>(
@@ -45,8 +70,9 @@ const GroupSchema = new Schema<IGroupModel>(
                     ref: 'User',
                 },
                 role: {
-                    type: String,
-                    default: 'member',
+                    type: Schema.Types.String,
+                    enum: Object.values(EGroupUserRole),
+                    default: EGroupUserRole.MEMBER,
                 },
             },
         ],
@@ -72,10 +98,11 @@ const GroupSchema = new Schema<IGroupModel>(
     }
 );
 
-GroupSchema.index({ name: 'text' }); // Index for search
-GroupSchema.index({ name: 1 }); // Index for name
-GroupSchema.index({ creator: 1 }); // Index for creator
-GroupSchema.index({ 'members.user': 1 }); // Index for members
+// Indexes
+GroupSchema.index({ name: 'text' });
+GroupSchema.index({ name: 1 });
+GroupSchema.index({ creator: 1 });
+GroupSchema.index({ 'members.user': 1 });
 
 const Group = models.Group || model<IGroupModel>('Group', GroupSchema);
 export default Group;
