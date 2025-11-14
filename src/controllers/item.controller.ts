@@ -1,95 +1,126 @@
 import { NextFunction, Request, Response } from 'express';
-import Item from '../models/item.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import { ItemService } from '../services/item.service';
+import { AppError } from '../common/errors/app.error';
+import { HTTP_STATUS } from '../common/constants/status-code';
 
-class ItemController {
-    // ROUTE: GET /items
-    public async getAllItems(
+/**
+ * Controller responsible for marketplace item endpoints.
+ */
+export class ItemController {
+    private itemService: ItemService;
+
+    constructor() {
+        this.itemService = new ItemService();
+    }
+
+    /**
+     * GET /api/v1/items
+     * Fetch paginated items.
+     */
+    public getAllItems = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 10;
+            const page = parseInt((req.query.page as string) || '1', 10) || 1;
+            const pageSize =
+                parseInt(
+                    (req.query.page_size as string) ||
+                        (req.query.pageSize as string) ||
+                        '10',
+                    10
+                ) || 10;
 
-            const items = await Item.find({})
-                .skip((+page - 1) * +page_size)
-                .limit(+page_size)
-                .sort({ createdAt: -1 })
-                .populate('category')
-                .populate('location')
-                .populate('seller', POPULATE_USER)
-                .populate('images');
+            const result = await this.itemService.getItemsWithPagination(
+                page,
+                pageSize
+            );
 
-            res.status(200).json(items);
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Items retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /items/search
-    public async searchItems(
+    /**
+     * GET /api/v1/items/search
+     * Search items by keyword with pagination.
+     */
+    public searchItems = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const query = req.query.q as string;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 10;
-
+            const query = (req.query.q as string) || '';
             if (!query) {
-                res.status(400).json({
-                    message: 'Query parameter is required',
-                });
-                return;
+                throw new AppError(
+                    'Query parameter is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
             }
 
-            const items = await Item.find({
-                $text: { $search: query },
-            })
-                .skip((+page - 1) * +page_size)
-                .limit(+page_size)
-                .sort({ createdAt: -1 })
-                .populate('category')
-                .populate('location')
-                .populate('seller', POPULATE_USER)
-                .populate('images');
+            const page = parseInt((req.query.page as string) || '1', 10) || 1;
+            const pageSize =
+                parseInt(
+                    (req.query.page_size as string) ||
+                        (req.query.pageSize as string) ||
+                        '10',
+                    10
+                ) || 10;
 
-            res.status(200).json(items);
+            const result = await this.itemService.searchItems(
+                query,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Items searched successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /items/seller/:sellerId
-    public async getItemsBySeller(
+    /**
+     * GET /api/v1/items/seller/:sellerId
+     * Fetch items posted by a seller.
+     */
+    public getItemsBySeller = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const sellerId = req.params.sellerId;
 
             if (!sellerId) {
-                res.status(400).json({
-                    message: 'Seller ID is required',
-                });
-                return;
+                throw new AppError(
+                    'Seller ID is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
             }
 
-            const items = await Item.find({ seller: sellerId })
-                .populate('category')
-                .populate('location')
-                .populate('seller', POPULATE_USER)
-                .populate('images');
+            const items = await this.itemService.getItemsBySeller(sellerId);
 
-            res.status(200).json(items);
+            ResponseUtil.success(
+                res,
+                items,
+                'Seller items retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
-
-export default new ItemController();

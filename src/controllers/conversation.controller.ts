@@ -1,132 +1,296 @@
 import { NextFunction, Request, Response } from 'express';
-import Conversation from '../models/conversation.model';
-import { IConversation } from '../types';
-import { getDecodedTokenFromHeaders } from '../utils/jwt';
-import { POPULATE_USER } from '../utils/populate';
+import { ConversationService } from '../services';
+import { ResponseUtil } from '../common/utils/response';
 
-class ConversationController {
-    public async getConversations(
+export class ConversationController {
+    private conversationService: ConversationService;
+
+    constructor() {
+        this.conversationService = new ConversationService();
+    }
+
+    /**
+     * POST /api/v1/conversations
+     * Create a new conversation
+     */
+    public createConversation = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const user_id = req.query.user_id as string;
+            const conversationData = req.body;
+            const userId = req.user?.id;
 
-            const conversations = await Conversation.find({
-                participants: {
-                    $elemMatch: { $eq: user_id },
-                },
-            })
-                .populate(
-                    'participants',
-                    POPULATE_USER + ' lastAccessed isOnline'
-                )
-                .populate('creator', POPULATE_USER)
-                .populate({
-                    path: 'lastMessage',
-                    populate: [
-                        {
-                            path: 'sender',
-                            select: POPULATE_USER,
-                        },
-                        {
-                            path: 'readBy.user',
-                            select: POPULATE_USER,
-                        },
-                    ],
-                })
-                .populate('avatar')
-                .populate({
-                    path: 'group',
-                    populate: [
-                        { path: 'avatar' },
-                        { path: 'members.user', select: POPULATE_USER },
-                        { path: 'creator', select: POPULATE_USER },
-                    ],
-                });
+            const conversation =
+                await this.conversationService.createConversation(
+                    conversationData,
+                    userId as string
+                );
 
-            res.status(200).json(conversations);
+            ResponseUtil.created(
+                res,
+                conversation,
+                'Conversation created successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    public async getConversationById(
+    /**
+     * GET /api/v1/conversations?user_id=:userId
+     * Get conversations by participant with pagination
+     */
+    public getConversations = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const conversation_id = req.params.id;
-            const decoded = await getDecodedTokenFromHeaders(req.headers);
+            const userId = req.query.user_id as string;
+            const page = parseInt(req.query.page as string) || 1;
+            const pageSize = parseInt(req.query.page_size as string) || 20;
 
-            if (!decoded) {
-                res.status(401).json({
-                    message: 'Unauthorized',
-                });
-
-                return;
+            if (!userId) {
+                return ResponseUtil.validationError(res, 'User ID is required');
             }
 
-            if (!conversation_id) {
-                res.status(400).json({
-                    message: 'Conversation ID is required',
-                });
+            const result =
+                await this.conversationService.getConversationsByParticipant(
+                    userId,
+                    {
+                        page,
+                        pageSize,
+                    }
+                );
 
-                return;
-            }
-
-            const conversation = (await Conversation.findOne({
-                _id: conversation_id,
-            })
-                .populate(
-                    'participants',
-                    POPULATE_USER + ' lastAccessed isOnline'
-                )
-                .populate('creator', POPULATE_USER)
-                .populate({
-                    path: 'lastMessage',
-                    populate: [
-                        {
-                            path: 'sender',
-                            select: POPULATE_USER,
-                        },
-                        {
-                            path: 'readBy.user',
-                            select: POPULATE_USER,
-                        },
-                    ],
-                })
-                .populate('avatar')
-                .populate({
-                    path: 'group',
-                    populate: [
-                        { path: 'avatar' },
-                        { path: 'members.user', select: POPULATE_USER },
-                        { path: 'creator', select: POPULATE_USER },
-                    ],
-                })) as IConversation;
-
-            if (
-                conversation.type === 'private' &&
-                !conversation.participants.some(
-                    (participant) => participant._id.toString() === decoded.id
-                )
-            ) {
-                res.status(403).json({
-                    message:
-                        'You do not have permission to access this conversation',
-                });
-
-                return;
-            }
-
-            res.status(200).json(conversation);
-        } catch (error: any) {
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Conversations retrieved successfully'
+            );
+        } catch (error) {
             next(error);
         }
-    }
-}
+    };
 
-export default new ConversationController();
+    /**
+     * GET /api/v1/conversations/:id
+     * Get conversation by ID
+     */
+    public getConversationById = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const userId = req.user?.id;
+
+            if (!userId) {
+                return ResponseUtil.unauthorized(res, 'Unauthorized');
+            }
+
+            const conversation =
+                await this.conversationService.getConversationById(id, userId);
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Conversation retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PUT /api/v1/conversations/:id
+     * Update a conversation
+     */
+    public updateConversation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const updateData = req.body;
+            const userId = req.user?.id;
+
+            const conversation =
+                await this.conversationService.updateConversation(
+                    id,
+                    updateData,
+                    userId as string
+                );
+
+            ResponseUtil.updated(
+                res,
+                conversation,
+                'Conversation updated successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/v1/conversations/:id/participants
+     * Add participant to conversation
+     */
+    public addParticipant = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const { participantId } = req.body;
+            const userId = req.user?.id;
+
+            if (!participantId) {
+                return ResponseUtil.validationError(
+                    res,
+                    'Participant ID is required'
+                );
+            }
+
+            const conversation = await this.conversationService.addParticipant(
+                id,
+                participantId,
+                userId as string
+            );
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Participant added successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/conversations/:id/participants/:participantId
+     * Remove participant from conversation
+     */
+    public removeParticipant = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id, participantId } = req.params;
+            const userId = req.user?.id;
+
+            const conversation =
+                await this.conversationService.removeParticipant(
+                    id,
+                    participantId,
+                    userId as string
+                );
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Participant removed successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/v1/conversations/:id/pin
+     * Pin message in conversation
+     */
+    public pinMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const { messageId } = req.body;
+            const userId = req.user?.id;
+
+            if (!messageId) {
+                return ResponseUtil.validationError(
+                    res,
+                    'Message ID is required'
+                );
+            }
+
+            const conversation = await this.conversationService.pinMessage(
+                id,
+                messageId,
+                userId as string
+            );
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Message pinned successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/conversations/:id/pin/:messageId
+     * Unpin message in conversation
+     */
+    public unpinMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id, messageId } = req.params;
+            const userId = req.user?.id;
+
+            const conversation = await this.conversationService.unpinMessage(
+                id,
+                messageId,
+                userId as string
+            );
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Message unpinned successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/conversations/:id
+     * Delete conversation for user (soft delete)
+     */
+    public deleteConversation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const userId = req.user?.id;
+
+            await this.conversationService.deleteConversationForUser(
+                id,
+                userId as string
+            );
+
+            ResponseUtil.deleted(res, 'Conversation deleted successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+}

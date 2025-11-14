@@ -1,53 +1,67 @@
 import { NextFunction, Request, Response } from 'express';
-import Group from '../models/group.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError } from '../common/errors/app.error';
+import { GroupService } from '../services/group.service';
 
-class GroupController {
-    public async getGroupByGroupId(
+/**
+ * Controller handling HTTP endpoints for groups.
+ */
+export class GroupController {
+    private groupService: GroupService;
+
+    constructor() {
+        this.groupService = new GroupService();
+    }
+
+    /**
+     * GET /api/v1/groups/:id
+     * Retrieve group details by ID.
+     */
+    public getGroupByGroupId = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const { id: groupId } = req.params;
-
-            const group = await Group.findById(groupId)
-                .populate('avatar')
-                .populate('creator', POPULATE_USER)
-                .populate('members.user', POPULATE_USER);
-
-            if (!group) {
-                res.status(404).json({ message: 'Group not found' });
-            }
-
-            res.status(200).json(group);
+            const group = await this.groupService.getGroupByIdWithDetails(
+                groupId
+            );
+            ResponseUtil.success(res, group, 'Group retrieved successfully');
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    public async getJoinedGroups(
+    /**
+     * GET /api/v1/groups/joined
+     * Retrieve groups the user has joined.
+     */
+    public getJoinedGroups = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const userId = req.query.user_id;
+            const userId =
+                (req.query.user_id as string) || (req.user?.id as string);
 
-            const groups = await Group.find({
-                members: {
-                    $elemMatch: { user: userId },
-                },
-            })
-                .populate('avatar')
-                .populate('creator', POPULATE_USER)
-                .populate('members.user', POPULATE_USER);
+            if (!userId) {
+                throw new AppError(
+                    'User ID is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
 
-            res.status(200).json(groups);
+            const groups = await this.groupService.getJoinedGroups(userId);
+            ResponseUtil.success(
+                res,
+                groups,
+                'Joined groups retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
-
-export default new GroupController();

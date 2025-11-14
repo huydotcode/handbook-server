@@ -1,39 +1,69 @@
 import { NextFunction, Request, Response } from 'express';
-import User from '../models/user.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import { UserService } from '../services/user.service';
 
-class UserController {
-    public async getUsers(req: Request, res: Response, next: NextFunction) {
-        try {
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 10;
+/**
+ * Controller for user-related HTTP handlers.
+ */
+export class UserController {
+    private userService: UserService;
 
-            const users = await User.find({})
-                .populate(POPULATE_USER)
-                .skip((+page - 1) * +pageSize)
-                .limit(+pageSize);
-
-            res.status(200).json(users);
-        } catch (error) {
-            res.status(500).json({ message: 'Error' });
-        }
+    constructor() {
+        this.userService = new UserService();
     }
 
-    public async getFriends(req: Request, res: Response, next: NextFunction) {
-        const userId = req.query.user_id;
-
+    /**
+     * GET /api/v1/users
+     * Fetch users with pagination metadata.
+     */
+    public getUsers = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
         try {
-            const user = await User.findById(userId).populate(
-                'friends',
-                POPULATE_USER
+            const page = parseInt(req.query.page as string, 10) || 1;
+            const pageSize =
+                parseInt(req.query.page_size as string, 10) ||
+                parseInt(req.query.pageSize as string, 10) ||
+                10;
+
+            const result = await this.userService.getUsersWithPagination({
+                page,
+                pageSize,
+            });
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Users retrieved successfully'
             );
-            const friends = (user && user.friends) || [];
-
-            res.status(200).json(friends);
         } catch (error) {
-            res.status(500).json({ message: 'Error' });
+            next(error);
         }
-    }
-}
+    };
 
-export default new UserController();
+    /**
+     * GET /api/v1/users/:id/friends
+     * Retrieve a user's friends list.
+     */
+    public getFriends = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id as string;
+            const friends = await this.userService.getUserFriends(userId);
+
+            ResponseUtil.success(
+                res,
+                friends,
+                'Friends retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

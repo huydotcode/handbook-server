@@ -1,28 +1,45 @@
-import { Request, Response } from 'express';
-import Location from '../models/location.model';
-import redis from '../services/redis';
+import { NextFunction, Request, Response } from 'express';
+import { ResponseUtil } from '../common/utils/response';
+import { LocationService } from '../services/location.service';
 
-class LocationController {
-    public async getLocations(req: Request, res: Response) {
-        try {
-            const cacheKey = 'locations';
+/**
+ * Controller responsible for location resources.
+ */
+export class LocationController {
+    private locationService: LocationService;
 
-            // Kiểm tra xem Redis có dữ liệu không
-            // const cachedData = await redis.get(cacheKey);
-            // if (cachedData) {
-            //     return res.status(200).json(JSON.parse(cachedData));
-            // }
-
-            // Nếu không có trong Redis, truy vấn MongoDB
-            const locations = await Location.find().sort('name');
-            // await redis.set(cacheKey, JSON.stringify(locations));
-
-            console.log('✅ Dữ liệu đã lưu vào Redis');
-            return res.status(200).json(locations);
-        } catch (error) {
-            res.status(500).json({ message: 'Error' });
-        }
+    constructor() {
+        this.locationService = new LocationService();
     }
-}
 
-export default new LocationController();
+    /**
+     * GET /api/v1/locations
+     * Retrieve all locations or filter by type.
+     */
+    public getLocations = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { type, sort } = req.query;
+            const sortOrder =
+                (sort as string)?.toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+            const locations = type
+                ? await this.locationService.getLocationsByType(
+                      type as string,
+                      sortOrder
+                  )
+                : await this.locationService.getAllLocations(sortOrder);
+
+            ResponseUtil.success(
+                res,
+                locations,
+                'Locations retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

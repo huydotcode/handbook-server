@@ -1,33 +1,106 @@
 import { NextFunction, Request, Response } from 'express';
-import Notification from '../models/notification.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import { NotificationService } from '../services/notification.service';
+import { AppError } from '../common/errors/app.error';
+import { HTTP_STATUS } from '../common/constants/status-code';
 
-class NotificationController {
-    public async getNotifications(
+/**
+ * Controller responsible for notification-related endpoints.
+ */
+export class NotificationController {
+    private notificationService: NotificationService;
+
+    constructor() {
+        this.notificationService = new NotificationService();
+    }
+
+    /**
+     * GET /api/v1/notifications/receiver/:receiverId
+     * Fetch paginated notifications for a receiver.
+     */
+    public getNotificationsByReceiver = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ) {
+    ): Promise<void> => {
         try {
-            const userId = req.query.user_id as string;
-            const page = parseInt(req.query.page as string);
-            const pageSize = parseInt(req.query.pageSize as string);
+            const receiverId = req.params.receiverId;
 
-            const notifications = await Notification.find({
-                receiver: userId,
-                isDeleted: false,
-            })
-                .sort({ createdAt: -1, isRead: 1 })
-                .skip((+page - 1) * +pageSize)
-                .limit(+pageSize)
-                .populate('sender', POPULATE_USER)
-                .populate('receiver', POPULATE_USER);
+            if (!receiverId) {
+                throw new AppError(
+                    'Receiver ID is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
 
-            res.status(200).json(notifications);
+            const page = parseInt((req.query.page as string) || '1', 10) || 1;
+            const pageSize =
+                parseInt(
+                    (req.query.page_size as string) ||
+                        (req.query.pageSize as string) ||
+                        '10',
+                    10
+                ) || 10;
+
+            const result =
+                await this.notificationService.getNotificationsWithPagination(
+                    receiverId,
+                    page,
+                    pageSize
+                );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Notifications retrieved successfully'
+            );
         } catch (error) {
-            res.status(500).json({ message: 'Error fetching notifications' });
+            next(error);
         }
-    }
-}
+    };
 
-export default new NotificationController();
+    /**
+     * GET /api/v1/notifications/sender/:senderId
+     * Fetch request notifications created by a sender.
+     */
+    public getRequestsBySender = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const senderId = req.params.senderId;
+            if (!senderId) {
+                throw new AppError(
+                    'Sender ID is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
+
+            const page = parseInt((req.query.page as string) || '1', 10) || 1;
+            const pageSize =
+                parseInt(
+                    (req.query.page_size as string) ||
+                        (req.query.pageSize as string) ||
+                        '10',
+                    10
+                ) || 10;
+
+            const result = await this.notificationService.getRequestsBySender(
+                senderId,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Requests retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

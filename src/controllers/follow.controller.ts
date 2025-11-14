@@ -1,33 +1,47 @@
 import { NextFunction, Request, Response } from 'express';
-import Follows from '../models/follow.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import { FollowService } from '../services/follow.service';
+import { AppError } from '../common/errors/app.error';
+import { HTTP_STATUS } from '../common/constants/status-code';
 
-class FollowController {
-    public async getFollowings(
+/**
+ * Controller for follow-related HTTP endpoints.
+ */
+export class FollowController {
+    private followService: FollowService;
+
+    constructor() {
+        this.followService = new FollowService();
+    }
+
+    /**
+     * GET /api/v1/follows/:userId/followings
+     * Fetch followings for a user.
+     */
+    public getFollowings = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const userId = req.params.user_id || req.query.user_id;
+            const userId = req.params.user_id;
 
             if (!userId) {
-                res.status(400).json({
-                    message: 'User ID is required',
-                });
-                return;
+                throw new AppError(
+                    'User ID is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
             }
 
-            const followings = await Follows.find({ follower: userId })
-                .populate('follower', POPULATE_USER)
-                .populate('following', POPULATE_USER)
-                .exec();
+            const followings = await this.followService.getFollowing(userId);
 
-            res.status(200).json(followings);
+            ResponseUtil.success(
+                res,
+                followings,
+                'Followings retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
-
-export default new FollowController();

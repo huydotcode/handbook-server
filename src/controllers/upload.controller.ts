@@ -1,162 +1,87 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
 import { NextFunction, Request, Response } from 'express';
-import { v2 as cloudinary } from 'cloudinary';
-import { jwt } from '../utils/jwt';
-import Media from '../models/media.model';
-import { JwtPayload } from 'jsonwebtoken';
+import { ResponseUtil } from '../common/utils/response';
+import { getDecodedTokenFromRequest } from '../common/utils/jwt';
+import { UploadService } from '../services/upload.service';
+import { UnauthorizedError } from '../common/errors/app.error';
 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_NAME,
-    api_key: process.env.CLOUDINARY_KEY,
-    api_secret: process.env.CLOUDINARY_SECRET,
-});
+/**
+ * Controller for handling media uploads.
+ */
+export class UploadController {
+    private uploadService: UploadService;
 
-class UploadController {
-    public async uploadImage(req: Request, res: Response, next: NextFunction) {
-        try {
-            const token = req.headers.authorization?.split(' ')[1];
-            const image = req.file;
-            if (!token) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Unauthorized',
-                });
-            }
-
-            const decodedToken: JwtPayload = jwt.verify(token);
-            if (!decodedToken || !decodedToken.id) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid token',
-                });
-            }
-
-            console.log('Decoded Token:', decodedToken);
-
-            if (!image) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No image file provided',
-                });
-            }
-
-            const arrayBuffer = await image.buffer;
-            const buffer = Buffer.from(arrayBuffer);
-
-            // Upload lên Cloudinary bằng stream
-            const uploadResult = (await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        resource_type: 'image',
-                        folder: `handbook/images/${decodedToken.id}`,
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-
-                uploadStream.end(buffer);
-            })) as any;
-
-            const newMedia = new Media({
-                publicId: uploadResult.public_id,
-                width: uploadResult.width,
-                height: uploadResult.height,
-                resourceType: uploadResult.resource_type,
-                type: uploadResult.format,
-                url: uploadResult.secure_url,
-                creator: decodedToken.id,
-            });
-
-            await newMedia.save();
-
-            return res.status(200).json({
-                success: true,
-                data: newMedia,
-            });
-        } catch (error) {
-            console.error('Error uploading image:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to upload image',
-            });
-        }
+    constructor() {
+        this.uploadService = new UploadService();
     }
 
-    public async uploadVideo(req: Request, res: Response, next: NextFunction) {
+    /**
+     * POST /api/v1/upload/image
+     * Upload an image to Cloudinary and store its metadata.
+     */
+    public uploadImage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
         try {
-            const token = req.headers.authorization?.split(' ')[1];
-            const video = req.file;
-            if (!token) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Unauthorized',
-                });
-            }
+            const userId = this.getUserId(req);
+            const file = req.file;
 
-            const decodedToken: JwtPayload = jwt.verify(token);
-            if (!decodedToken || !decodedToken.id) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid token',
-                });
-            }
+            const media = await this.uploadService.uploadImage(
+                {
+                    buffer: file?.buffer as Buffer,
+                    originalname: file?.originalname || '',
+                    mimetype: file?.mimetype || '',
+                    size: file?.size || 0,
+                },
+                userId
+            );
 
-            console.log('Decoded Token:', decodedToken);
-
-            if (!video) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'No video file provided',
-                });
-            }
-
-            const arrayBuffer = await video.buffer;
-            const buffer = Buffer.from(arrayBuffer);
-
-            // Upload lên Cloudinary bằng stream
-            const uploadResult = (await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        resource_type: 'video',
-                        folder: `handbook/videos/${decodedToken.id}`,
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-
-                uploadStream.end(buffer);
-            })) as any;
-
-            const newMedia = new Media({
-                publicId: uploadResult.public_id,
-                width: uploadResult.width,
-                height: uploadResult.height,
-                resourceType: uploadResult.resource_type,
-                type: uploadResult.format,
-                url: uploadResult.secure_url,
-                creator: decodedToken.id,
-            });
-
-            await newMedia.save();
-
-            return res.status(200).json({
-                success: true,
-                data: newMedia,
-            });
+            ResponseUtil.created(res, media, 'Image uploaded successfully');
         } catch (error) {
-            console.error('Error uploading video:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to upload video',
-            });
+            next(error);
         }
+    };
+
+    /**
+     * POST /api/v1/upload/video
+     * Upload a video to Cloudinary and store its metadata.
+     */
+    public uploadVideo = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = this.getUserId(req);
+            const file = req.file;
+
+            const media = await this.uploadService.uploadVideo(
+                {
+                    buffer: file?.buffer as Buffer,
+                    originalname: file?.originalname || '',
+                    mimetype: file?.mimetype || '',
+                    size: file?.size || 0,
+                },
+                userId
+            );
+
+            ResponseUtil.created(res, media, 'Video uploaded successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private getUserId(req: Request): string {
+        if (req.user?.id) {
+            return req.user.id;
+        }
+
+        const decoded = getDecodedTokenFromRequest(req);
+        if (!decoded?.id) {
+            throw new UnauthorizedError('Unauthorized');
+        }
+
+        return decoded.id;
     }
 }
-
-export default new UploadController();
