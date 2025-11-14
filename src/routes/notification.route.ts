@@ -11,11 +11,15 @@ const notificationRoutes: IApiRoute[] = [
         path: '/receiver/:receiverId',
         method: EApiMethod.GET,
         controller: notificationController.getNotificationsByReceiver,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
         path: '/sender/:senderId',
         method: EApiMethod.GET,
         controller: notificationController.getRequestsBySender,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
 ];
 

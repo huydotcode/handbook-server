@@ -171,7 +171,7 @@ export class PostController {
     };
 
     /**
-     * GET /api/v1/posts/profile/:user_id
+     * GET /api/v1/posts/profile/:userId
      * Get profile posts for a specific user.
      */
     public getProfilePosts = async (
@@ -180,7 +180,7 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.params.user_id;
+            const userId = req.params.userId;
             validateRequiredParam(userId, 'User ID');
             const authenticatedUserId = getOptionalUserId(req) || userId;
             const { page, pageSize } = getPaginationParams(req, 3);
@@ -208,7 +208,7 @@ export class PostController {
     };
 
     /**
-     * GET /api/v1/posts/group/:group_id
+     * GET /api/v1/posts/group/:groupId
      * Get posts for a specific group.
      */
     public getGroupPosts = async (
@@ -218,7 +218,7 @@ export class PostController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const groupId = req.params.group_id;
+            const groupId = req.params.groupId;
             validateRequiredParam(groupId, 'Group ID');
             const { page, pageSize } = getPaginationParams(req, 3);
 
@@ -244,7 +244,7 @@ export class PostController {
     };
 
     /**
-     * GET /api/v1/posts/group/:group_id/manage
+     * GET /api/v1/posts/group/:groupId/manage
      * Get manage group posts (active status).
      */
     public getManageGroupPosts = async (
@@ -254,7 +254,7 @@ export class PostController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const groupId = req.params.group_id;
+            const groupId = req.params.groupId;
             validateRequiredParam(groupId, 'Group ID');
             const { page, pageSize } = getPaginationParams(req, 3);
 
@@ -280,7 +280,7 @@ export class PostController {
     };
 
     /**
-     * GET /api/v1/posts/group/:group_id/manage/pending
+     * GET /api/v1/posts/group/:groupId/manage/pending
      * Get manage group posts (pending status).
      */
     public getManageGroupPostsPending = async (
@@ -290,7 +290,7 @@ export class PostController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const groupId = req.params.group_id;
+            const groupId = req.params.groupId;
             validateRequiredParam(groupId, 'Group ID');
             const { page, pageSize } = getPaginationParams(req, 3);
 
@@ -316,7 +316,7 @@ export class PostController {
     };
 
     /**
-     * GET /api/v1/posts/group/:group_id/member/:user_id
+     * GET /api/v1/posts/group/:groupId/member/:userId
      * Get posts by member in a group.
      */
     public getPostByMember = async (
@@ -325,8 +325,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.params.user_id;
-            const groupId = req.params.group_id;
+            const userId = req.params.userId;
+            const groupId = req.params.groupId;
             validateRequiredParam(userId, 'User ID');
             validateRequiredParam(groupId, 'Group ID');
             const authenticatedUserId = getOptionalUserId(req) || userId;

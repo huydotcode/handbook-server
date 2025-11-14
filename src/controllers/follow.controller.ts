@@ -23,7 +23,7 @@ export class FollowController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.params.user_id;
+            const userId = req.params.userId;
             validateRequiredParam(userId, 'User ID');
 
             const followings = await this.followService.getFollowing(userId);

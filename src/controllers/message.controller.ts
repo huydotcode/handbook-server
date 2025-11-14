@@ -18,7 +18,7 @@ export class MessageController {
     }
 
     /**
-     * GET /api/messages/conversation/:conversation_id
+     * GET /api/messages/conversation/:conversationId
      * Fetch paginated messages of a conversation.
      */
     public getMessages = async (
@@ -28,7 +28,7 @@ export class MessageController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const conversationId = req.params.conversation_id;
+            const conversationId = req.params.conversationId;
             validateRequiredParam(conversationId, 'Conversation ID');
 
             const { page, pageSize } = getPaginationParams(req, 20);
@@ -52,7 +52,7 @@ export class MessageController {
     };
 
     /**
-     * GET /api/messages/conversation/:conversation_id/pinned
+     * GET /api/messages/conversation/:conversationId/pinned
      * Fetch pinned messages of a conversation.
      */
     public getPinnedMessages = async (
@@ -62,7 +62,7 @@ export class MessageController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const conversationId = req.params.conversation_id;
+            const conversationId = req.params.conversationId;
             validateRequiredParam(conversationId, 'Conversation ID');
 
             const { page, pageSize } = getPaginationParams(req, 20);
@@ -87,7 +87,7 @@ export class MessageController {
     };
 
     /**
-     * GET /api/messages/conversation/:conversation_id/search
+     * GET /api/messages/conversation/:conversationId/search
      * Search conversation messages by keyword.
      */
     public search = async (
@@ -97,7 +97,7 @@ export class MessageController {
     ): Promise<void> => {
         try {
             const userId = getAuthenticatedUserId(req);
-            const conversationId = req.params.conversation_id;
+            const conversationId = req.params.conversationId;
             validateRequiredParam(conversationId, 'Conversation ID');
 
             const keyword = (req.query.q as string) || '';

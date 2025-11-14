@@ -11,6 +11,7 @@ const locationRoutes: IApiRoute[] = [
         path: '/',
         method: EApiMethod.GET,
         controller: locationController.getLocations,
+        isRateLimited: true,
     },
 ];
 

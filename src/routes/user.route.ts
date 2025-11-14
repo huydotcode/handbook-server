@@ -11,11 +11,13 @@ const userRoutes: IApiRoute[] = [
         path: '/',
         method: EApiMethod.GET,
         controller: userController.getUsers,
+        isRateLimited: true,
     },
     {
         path: '/:id/friends',
         method: EApiMethod.GET,
         controller: userController.getFriends,
+        isRateLimited: true,
     },
 ];
 

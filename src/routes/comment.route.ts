@@ -7,6 +7,13 @@ const commentRouter = Router();
 const commentController = new CommentController();
 
 const commentRoutes: IApiRoute[] = [
+    // Specific routes first
+    {
+        path: '/post/:postId/count',
+        method: EApiMethod.GET,
+        controller: commentController.countCommentsByPost,
+        isRateLimited: true,
+    },
     {
         path: '/post/:postId',
         method: EApiMethod.GET,
@@ -20,22 +27,32 @@ const commentRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
-        path: '/post/:postId/count',
-        method: EApiMethod.GET,
-        controller: commentController.countCommentsByPost,
+        path: '/:id/love',
+        method: EApiMethod.POST,
+        controller: commentController.addLove,
+        isPrivateRoute: true,
         isRateLimited: true,
     },
     {
-        path: '/:id',
-        method: EApiMethod.GET,
-        controller: commentController.getCommentById,
+        path: '/:id/love',
+        method: EApiMethod.DELETE,
+        controller: commentController.removeLove,
+        isPrivateRoute: true,
         isRateLimited: true,
     },
+    // Collection routes
     {
         path: '/',
         method: EApiMethod.POST,
         controller: commentController.createComment,
         isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.GET,
+        controller: commentController.getCommentById,
         isRateLimited: true,
     },
     {
@@ -49,20 +66,6 @@ const commentRoutes: IApiRoute[] = [
         path: '/:id',
         method: EApiMethod.DELETE,
         controller: commentController.deleteComment,
-        isPrivateRoute: true,
-        isRateLimited: true,
-    },
-    {
-        path: '/:id/love',
-        method: EApiMethod.POST,
-        controller: commentController.addLove,
-        isPrivateRoute: true,
-        isRateLimited: true,
-    },
-    {
-        path: '/:id/love',
-        method: EApiMethod.DELETE,
-        controller: commentController.removeLove,
         isPrivateRoute: true,
         isRateLimited: true,
     },

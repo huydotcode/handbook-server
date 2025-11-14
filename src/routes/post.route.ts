@@ -7,65 +7,88 @@ const postRouter = Router();
 const postController = new PostController();
 
 const postRoutes: IApiRoute[] = [
-    {
-        path: '/',
-        method: EApiMethod.GET,
-        controller: postController.getAllPosts,
-    },
-    {
-        path: '/',
-        method: EApiMethod.POST,
-        controller: postController.createPost,
-    },
+    // Specific routes first
     {
         path: '/new-feed',
         method: EApiMethod.GET,
         controller: postController.getNewFeedPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
         path: '/new-feed-group',
         method: EApiMethod.GET,
         controller: postController.getNewFeedGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
         path: '/new-feed-friend',
         method: EApiMethod.GET,
         controller: postController.getNewFeedFriendPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
         path: '/saved',
         method: EApiMethod.GET,
         controller: postController.getSavedPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
-        path: '/profile/:user_id',
+        path: '/profile/:userId',
         method: EApiMethod.GET,
         controller: postController.getProfilePosts,
+        isRateLimited: true,
     },
     {
-        path: '/group/:group_id/member/:user_id',
-        method: EApiMethod.GET,
-        controller: postController.getPostByMember,
-    },
-    {
-        path: '/group/:group_id/manage',
-        method: EApiMethod.GET,
-        controller: postController.getManageGroupPosts,
-    },
-    {
-        path: '/group/:group_id/manage/pending',
+        path: '/group/:groupId/manage/pending',
         method: EApiMethod.GET,
         controller: postController.getManageGroupPostsPending,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
-        path: '/group/:group_id',
+        path: '/group/:groupId/manage',
+        method: EApiMethod.GET,
+        controller: postController.getManageGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId/member/:userId',
+        method: EApiMethod.GET,
+        controller: postController.getPostByMember,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId',
         method: EApiMethod.GET,
         controller: postController.getGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.GET,
+        controller: postController.getAllPosts,
+        isRateLimited: true,
+    },
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: postController.createPost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
     {
         path: '/:id',
         method: EApiMethod.GET,
         controller: postController.getPostById,
+        isRateLimited: true,
     },
 ];
 

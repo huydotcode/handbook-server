@@ -8,19 +8,22 @@ const itemController = new ItemController();
 
 const itemRoutes: IApiRoute[] = [
     {
-        path: '/',
+        path: '/search',
         method: EApiMethod.GET,
-        controller: itemController.getAllItems,
+        controller: itemController.searchItems,
+        isRateLimited: true,
     },
     {
         path: '/seller/:sellerId',
         method: EApiMethod.GET,
         controller: itemController.getItemsBySeller,
+        isRateLimited: true,
     },
     {
-        path: '/search',
+        path: '/',
         method: EApiMethod.GET,
-        controller: itemController.searchItems,
+        controller: itemController.getAllItems,
+        isRateLimited: true,
     },
 ];
 

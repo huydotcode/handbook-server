@@ -7,21 +7,7 @@ const categoryRouter = Router();
 const categoryController = new CategoryController();
 
 const categoryRoutes: IApiRoute[] = [
-    {
-        path: '/',
-        method: EApiMethod.GET,
-        controller: categoryController.getCategories,
-        isRateLimited: true,
-        isPrivateRoute: true,
-    },
-    {
-        path: '/',
-        method: EApiMethod.POST,
-        controller: categoryController.createCategory,
-        isRateLimited: true,
-        isPrivateRoute: true,
-        isAdminRoute: true,
-    },
+    // Specific routes first
     {
         path: '/all',
         method: EApiMethod.GET,
@@ -43,6 +29,23 @@ const categoryRoutes: IApiRoute[] = [
         isRateLimited: true,
         isPrivateRoute: true,
     },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.GET,
+        controller: categoryController.getCategories,
+        isRateLimited: true,
+        isPrivateRoute: true,
+    },
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: categoryController.createCategory,
+        isRateLimited: true,
+        isPrivateRoute: true,
+        isAdminRoute: true,
+    },
+    // Dynamic routes last
     {
         path: '/:id',
         method: EApiMethod.GET,

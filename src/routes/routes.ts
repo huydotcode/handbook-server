@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import authRouter from './auth.route';
 import categoryRouter from './category.route';
 import commentRouter from './comment.route';
 import conversationRouter from './conversation.route';
@@ -15,6 +16,10 @@ import userRouter from './user.route';
 
 const apiRouter = Router();
 
+// Public routes first
+apiRouter.use('/auth', authRouter);
+
+// Protected routes
 apiRouter.use('/posts', postRouter);
 apiRouter.use('/comments', commentRouter);
 apiRouter.use('/conversations', conversationRouter);

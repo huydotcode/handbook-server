@@ -5,20 +5,17 @@ import apiRouter from './routes/routes';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import morgan from 'morgan';
 import {
     globalErrorHandler,
     handleUncaughtException,
     handleUnhandledRejection,
     notFoundHandler,
 } from './common/errors';
-import authMiddleware from './middlewares/auth.middleware';
-import authRouter from './routes/auth.route';
 import { config } from './common/utils/config';
 import { connectToMongo } from './common/utils/mongodb';
 
 dotenv.config();
-
-const morgan = require('morgan');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -43,11 +40,14 @@ app.use(
     })
 );
 
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1', authMiddleware, apiRouter);
+app.use('/api/v1', apiRouter);
 
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.status(200).json({
+        success: true,
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+    });
 });
 
 app.use(notFoundHandler);

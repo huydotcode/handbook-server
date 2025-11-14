@@ -8,9 +8,10 @@ const followController = new FollowController();
 
 const followRoutes: IApiRoute[] = [
     {
-        path: '/:user_id/followings',
+        path: '/:userId/followings',
         method: EApiMethod.GET,
         controller: followController.getFollowings,
+        isRateLimited: true,
     },
 ];
 

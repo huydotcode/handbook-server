@@ -8,19 +8,25 @@ const messageController = new MessageController();
 
 const messageRoutes: IApiRoute[] = [
     {
-        path: '/conversation/:conversation_id',
-        method: EApiMethod.GET,
-        controller: messageController.getMessages,
-    },
-    {
-        path: '/conversation/:conversation_id/search',
+        path: '/conversation/:conversationId/search',
         method: EApiMethod.GET,
         controller: messageController.search,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
-        path: '/conversation/:conversation_id/pinned',
+        path: '/conversation/:conversationId/pinned',
         method: EApiMethod.GET,
         controller: messageController.getPinnedMessages,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/conversation/:conversationId',
+        method: EApiMethod.GET,
+        controller: messageController.getMessages,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
 ];
 
