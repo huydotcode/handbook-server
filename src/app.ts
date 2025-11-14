@@ -13,14 +13,11 @@ import {
     notFoundHandler,
 } from './common/errors';
 import { config } from './common/utils/config';
-import { connectToMongo } from './common/utils/mongodb';
 
 dotenv.config();
 
 const app = express();
 app.set('trust proxy', 1);
-
-connectToMongo();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -31,7 +28,9 @@ app.use(
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     })
 );
-app.use(morgan('dev'));
+// Morgan logging format based on environment
+const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(morganFormat));
 
 app.use(
     cors({
@@ -42,6 +41,17 @@ app.use(
 
 app.use('/api/v1', apiRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Server is healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+    });
+});
+
+// Root endpoint
 app.get('/', (req, res) => {
     res.status(200).json({
         success: true,
