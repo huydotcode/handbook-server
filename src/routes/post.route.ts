@@ -1,22 +1,74 @@
-import postController from '../controllers/post.controller';
 import { Router } from 'express';
+import { PostController } from '../controllers/post.controller';
+import { EApiMethod, IApiRoute } from '../common/types/route.type';
+import addRoutes from '../common/utils/add-route';
 
 const postRouter = Router();
+const postController = new PostController();
 
-postRouter.get('/', postController.getAllPosts);
-postRouter.post('/', postController.createPost);
-postRouter.get('/new-feed', postController.getNewFeedPosts);
-postRouter.get('/new-feed-group', postController.getNewFeedGroupPosts);
-postRouter.get('/new-feed-friend', postController.getNewFeedFriendPosts);
-postRouter.get('/saved', postController.getSavedPosts);
-postRouter.get('/profile/:user_id', postController.getProfilePosts);
-postRouter.get('/group/member', postController.getPostByMember);
-postRouter.get('/group/manage/:group_id', postController.getManageGroupPosts);
-postRouter.get(
-    '/group/manage/pending/:group_id',
-    postController.getManageGroupPostsPending
-);
-postRouter.get('/group/:group_id', postController.getGroupPosts);
-postRouter.get('/:id', postController.getPostById);
+const postRoutes: IApiRoute[] = [
+    {
+        path: '/',
+        method: EApiMethod.GET,
+        controller: postController.getAllPosts,
+    },
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: postController.createPost,
+    },
+    {
+        path: '/new-feed',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedPosts,
+    },
+    {
+        path: '/new-feed-group',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedGroupPosts,
+    },
+    {
+        path: '/new-feed-friend',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedFriendPosts,
+    },
+    {
+        path: '/saved',
+        method: EApiMethod.GET,
+        controller: postController.getSavedPosts,
+    },
+    {
+        path: '/profile/:user_id',
+        method: EApiMethod.GET,
+        controller: postController.getProfilePosts,
+    },
+    {
+        path: '/group/:group_id/member/:user_id',
+        method: EApiMethod.GET,
+        controller: postController.getPostByMember,
+    },
+    {
+        path: '/group/:group_id/manage',
+        method: EApiMethod.GET,
+        controller: postController.getManageGroupPosts,
+    },
+    {
+        path: '/group/:group_id/manage/pending',
+        method: EApiMethod.GET,
+        controller: postController.getManageGroupPostsPending,
+    },
+    {
+        path: '/group/:group_id',
+        method: EApiMethod.GET,
+        controller: postController.getGroupPosts,
+    },
+    {
+        path: '/:id',
+        method: EApiMethod.GET,
+        controller: postController.getPostById,
+    },
+];
+
+addRoutes(postRouter, postRoutes);
 
 export default postRouter;

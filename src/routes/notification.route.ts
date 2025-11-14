@@ -1,8 +1,24 @@
 import { Router } from 'express';
-import notificationController from '../controllers/notification.controller';
+import { NotificationController } from '../controllers/notification.controller';
+import { EApiMethod, IApiRoute } from '../common/types/route.type';
+import addRoutes from '../common/utils/add-route';
 
 const notificationRouter = Router();
+const notificationController = new NotificationController();
 
-notificationRouter.get("/", notificationController.getNotifications);
+const notificationRoutes: IApiRoute[] = [
+    {
+        path: '/receiver/:receiverId',
+        method: EApiMethod.GET,
+        controller: notificationController.getNotificationsByReceiver,
+    },
+    {
+        path: '/sender/:senderId',
+        method: EApiMethod.GET,
+        controller: notificationController.getRequestsBySender,
+    },
+];
+
+addRoutes(notificationRouter, notificationRoutes);
 
 export default notificationRouter;
