@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
+import {
+    getPaginationParams,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { UserService } from '../services/user.service';
 
 /**
@@ -22,11 +26,7 @@ export class UserController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const page = parseInt(req.query.page as string, 10) || 1;
-            const pageSize =
-                parseInt(req.query.page_size as string, 10) ||
-                parseInt(req.query.pageSize as string, 10) ||
-                10;
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result = await this.userService.getUsersWithPagination({
                 page,
@@ -54,7 +54,9 @@ export class UserController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.params.id as string;
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+
             const friends = await this.userService.getUserFriends(userId);
 
             ResponseUtil.success(

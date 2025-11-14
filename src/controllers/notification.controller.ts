@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
+import {
+    getPaginationParams,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { NotificationService } from '../services/notification.service';
-import { AppError } from '../common/errors/app.error';
-import { HTTP_STATUS } from '../common/constants/status-code';
 
 /**
  * Controller responsible for notification-related endpoints.
@@ -25,22 +27,9 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const receiverId = req.params.receiverId;
+            validateRequiredParam(receiverId, 'Receiver ID');
 
-            if (!receiverId) {
-                throw new AppError(
-                    'Receiver ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
-
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '10',
-                    10
-                ) || 10;
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result =
                 await this.notificationService.getNotificationsWithPagination(
@@ -71,21 +60,9 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const senderId = req.params.senderId;
-            if (!senderId) {
-                throw new AppError(
-                    'Sender ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(senderId, 'Sender ID');
 
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '10',
-                    10
-                ) || 10;
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result = await this.notificationService.getRequestsBySender(
                 senderId,

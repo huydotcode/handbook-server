@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { SearchService } from '../services/search.service';
 import { ResponseUtil } from '../common/utils/response';
-import { getDecodedTokenFromHeaders } from '../common/utils/jwt';
-import { UnauthorizedError } from '../common/errors/app.error';
+import {
+    getPaginationParams,
+    getAuthenticatedUserId,
+} from '../common/utils/controller.helper';
 
 /**
  * Controller responsible for handling search-related HTTP requests.
@@ -25,8 +27,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = this.getPaginationParams(req);
-            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req);
+            const userId = getAuthenticatedUserId(req);
 
             const results = await this.searchService.searchAll(
                 query,
@@ -56,8 +58,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = this.getPaginationParams(req);
-            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req);
+            const userId = getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchUsers(
                 query,
@@ -88,8 +90,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = this.getPaginationParams(req);
-            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req);
+            const userId = getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchGroups(
                 query,
@@ -120,8 +122,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = this.getPaginationParams(req);
-            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req);
+            const userId = getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchPosts(
                 query,
@@ -140,36 +142,4 @@ export class SearchController {
             next(error);
         }
     };
-
-    private getPaginationParams(req: Request): {
-        page: number;
-        pageSize: number;
-    } {
-        const page = parseInt((req.query.page as string) || '1', 10);
-        const pageSize = parseInt(
-            (req.query.page_size as string) ||
-                (req.query.pageSize as string) ||
-                (req.query.limit as string) ||
-                '10',
-            10
-        );
-
-        return {
-            page: Number.isNaN(page) || page < 1 ? 1 : page,
-            pageSize: Number.isNaN(pageSize) || pageSize < 1 ? 10 : pageSize,
-        };
-    }
-
-    private getAuthenticatedUserId(req: Request): string {
-        if (req.user?.id) {
-            return req.user.id;
-        }
-
-        const decoded = getDecodedTokenFromHeaders(req.headers);
-        if (decoded?.id) {
-            return decoded.id;
-        }
-
-        throw new UnauthorizedError('Unauthorized');
-    }
 }

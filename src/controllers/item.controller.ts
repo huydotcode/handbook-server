@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
+import {
+    getPaginationParams,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { ItemService } from '../services/item.service';
 import { AppError } from '../common/errors/app.error';
 import { HTTP_STATUS } from '../common/constants/status-code';
@@ -24,14 +28,7 @@ export class ItemController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '10',
-                    10
-                ) || 10;
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result = await this.itemService.getItemsWithPagination(
                 page,
@@ -67,14 +64,7 @@ export class ItemController {
                 );
             }
 
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '10',
-                    10
-                ) || 10;
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result = await this.itemService.searchItems(
                 query,
@@ -104,13 +94,7 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const sellerId = req.params.sellerId;
-
-            if (!sellerId) {
-                throw new AppError(
-                    'Seller ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(sellerId, 'Seller ID');
 
             const items = await this.itemService.getItemsBySeller(sellerId);
 

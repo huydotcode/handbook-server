@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
+import { validateRequiredParam } from '../common/utils/controller.helper';
 import { FollowService } from '../services/follow.service';
-import { AppError } from '../common/errors/app.error';
-import { HTTP_STATUS } from '../common/constants/status-code';
 
 /**
  * Controller for follow-related HTTP endpoints.
@@ -25,13 +24,7 @@ export class FollowController {
     ): Promise<void> => {
         try {
             const userId = req.params.user_id;
-
-            if (!userId) {
-                throw new AppError(
-                    'User ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(userId, 'User ID');
 
             const followings = await this.followService.getFollowing(userId);
 

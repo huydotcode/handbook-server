@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { HTTP_STATUS } from '../common/constants/status-code';
-import { AppError } from '../common/errors/app.error';
+import {
+    getAuthenticatedUserId,
+    getOptionalUserId,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { GroupService } from '../services/group.service';
 
 /**
@@ -24,7 +27,9 @@ export class GroupController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { id: groupId } = req.params;
+            const groupId = req.params.id;
+            validateRequiredParam(groupId, 'Group ID');
+
             const group = await this.groupService.getGroupByIdWithDetails(
                 groupId
             );
@@ -45,21 +50,26 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const userId =
-                (req.query.user_id as string) || (req.user?.id as string);
+                (req.query.user_id as string) || getOptionalUserId(req);
 
             if (!userId) {
-                throw new AppError(
-                    'User ID is required',
-                    HTTP_STATUS.BAD_REQUEST
+                const authenticatedUserId = getAuthenticatedUserId(req);
+                const groups = await this.groupService.getJoinedGroups(
+                    authenticatedUserId
+                );
+                ResponseUtil.success(
+                    res,
+                    groups,
+                    'Joined groups retrieved successfully'
+                );
+            } else {
+                const groups = await this.groupService.getJoinedGroups(userId);
+                ResponseUtil.success(
+                    res,
+                    groups,
+                    'Joined groups retrieved successfully'
                 );
             }
-
-            const groups = await this.groupService.getJoinedGroups(userId);
-            ResponseUtil.success(
-                res,
-                groups,
-                'Joined groups retrieved successfully'
-            );
         } catch (error) {
             next(error);
         }

@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { HTTP_STATUS } from '../common/constants/status-code';
-import { AppError, UnauthorizedError } from '../common/errors/app.error';
+import {
+    getPaginationParams,
+    getAuthenticatedUserId,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { MessageService } from '../services/message.service';
 
 /**
@@ -24,27 +27,11 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.user?.id;
-            if (!userId) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const conversationId = req.params.conversation_id;
-            if (!conversationId) {
-                throw new AppError(
-                    'Conversation ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(conversationId, 'Conversation ID');
 
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '20',
-                    10
-                ) || 20;
+            const { page, pageSize } = getPaginationParams(req, 20);
 
             const result = await this.messageService.getConversationMessages(
                 conversationId,
@@ -74,27 +61,11 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.user?.id;
-            if (!userId) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const conversationId = req.params.conversation_id;
-            if (!conversationId) {
-                throw new AppError(
-                    'Conversation ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(conversationId, 'Conversation ID');
 
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '20',
-                    10
-                ) || 20;
+            const { page, pageSize } = getPaginationParams(req, 20);
 
             const result =
                 await this.messageService.getPinnedConversationMessages(
@@ -125,18 +96,9 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.user?.id;
-            if (!userId) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const conversationId = req.params.conversation_id;
-            if (!conversationId) {
-                throw new AppError(
-                    'Conversation ID is required',
-                    HTTP_STATUS.BAD_REQUEST
-                );
-            }
+            validateRequiredParam(conversationId, 'Conversation ID');
 
             const keyword = (req.query.q as string) || '';
 

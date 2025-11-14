@@ -1,10 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { PostService } from '../services';
-import {
-    getDecodedTokenFromHeaders,
-    getDecodedTokenFromRequest,
-} from '../common/utils/jwt';
 import { ResponseUtil } from '../common/utils/response';
+import {
+    getPaginationParams,
+    getAuthenticatedUserId,
+    getOptionalUserId,
+    validateRequiredParam,
+    validateRequiredBodyField,
+} from '../common/utils/controller.helper';
 import { UnauthorizedError } from '../common/errors/app.error';
 import { EPostStatus } from '../models/post.model';
 
@@ -29,9 +32,12 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postData = req.body;
+            const userId = getAuthenticatedUserId(req);
+            validateRequiredBodyField(postData, 'author');
+
             const newPost = await this.postService.createPost(
-                postData,
-                postData.author
+                { ...postData, author: postData.author },
+                userId
             );
             ResponseUtil.created(res, newPost, 'Post created successfully');
         } catch (error) {
@@ -67,10 +73,10 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            const post = await this.postService.getPostById(
-                postId,
-                req.user?.id as string
-            );
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getOptionalUserId(req) || postId; // Fallback to postId if not authenticated
+
+            const post = await this.postService.getPostById(postId, userId);
             ResponseUtil.success(res, post, 'Post retrieved successfully');
         } catch (error) {
             next(error);
@@ -87,20 +93,19 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedPosts(
-                req.user?.id!,
+                userId,
                 page,
                 pageSize
             );
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'New feed posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'New feed posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -117,25 +122,19 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.query.user_id as string;
-            if (!userId) {
-                throw new UnauthorizedError('User ID is required');
-            }
-
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedFriendPosts(
                 userId,
                 page,
                 pageSize
             );
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Friend feed posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Friend feed posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -152,25 +151,19 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.query.user_id as string;
-            if (!userId) {
-                throw new UnauthorizedError('User ID is required');
-            }
-
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedGroupPosts(
                 userId,
                 page,
                 pageSize
             );
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Group feed posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Group feed posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -188,8 +181,9 @@ export class PostController {
     ): Promise<void> => {
         try {
             const userId = req.params.user_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            validateRequiredParam(userId, 'User ID');
+            const authenticatedUserId = getOptionalUserId(req) || userId;
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -197,17 +191,16 @@ export class PostController {
                     group: null,
                     status: EPostStatus.ACTIVE,
                 },
-                userId,
+                authenticatedUserId,
                 page,
                 pageSize
             );
 
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Profile posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Profile posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -224,31 +217,26 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-            if (!token) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const groupId = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
                     group: groupId,
                     status: EPostStatus.ACTIVE,
                 },
-                token.id,
+                userId,
                 page,
                 pageSize
             );
 
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Group posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Group posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -265,31 +253,26 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-            if (!token) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const groupId = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
                     group: groupId,
                     status: EPostStatus.ACTIVE,
                 },
-                token.id,
+                userId,
                 page,
                 pageSize
             );
 
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Manage group posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Manage group posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -306,31 +289,26 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-            if (!token) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
+            const userId = getAuthenticatedUserId(req);
             const groupId = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
                     group: groupId,
                     status: EPostStatus.PENDING,
                 },
-                token.id,
+                userId,
                 page,
                 pageSize
             );
 
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Pending group posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Pending group posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -349,8 +327,10 @@ export class PostController {
         try {
             const userId = req.params.user_id;
             const groupId = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const pageSize = parseInt(req.query.page_size as string) || 3;
+            validateRequiredParam(userId, 'User ID');
+            validateRequiredParam(groupId, 'Group ID');
+            const authenticatedUserId = getOptionalUserId(req) || userId;
+            const { page, pageSize } = getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -358,17 +338,16 @@ export class PostController {
                     group: groupId,
                     status: EPostStatus.ACTIVE,
                 },
-                userId,
+                authenticatedUserId,
                 page,
                 pageSize
             );
 
-            ResponseUtil.success(
+            ResponseUtil.paginated(
                 res,
                 result.data,
-                'Member posts retrieved successfully',
-                200,
-                result.pagination
+                result.pagination,
+                'Member posts retrieved successfully'
             );
         } catch (error) {
             next(error);
@@ -385,19 +364,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.user?.id;
-            if (!userId) {
-                throw new UnauthorizedError('Unauthorized');
-            }
-
-            const page = parseInt((req.query.page as string) || '1', 10) || 1;
-            const pageSize =
-                parseInt(
-                    (req.query.page_size as string) ||
-                        (req.query.pageSize as string) ||
-                        '10',
-                    10
-                ) || 10;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 10);
 
             const result = await this.postService.getSavedPosts(
                 userId,
@@ -405,7 +373,12 @@ export class PostController {
                 pageSize
             );
 
-            ResponseUtil.paginated(res, result.data, result.pagination);
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Saved posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }

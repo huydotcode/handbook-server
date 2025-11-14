@@ -1,8 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { getDecodedTokenFromRequest } from '../common/utils/jwt';
+import { getAuthenticatedUserId } from '../common/utils/controller.helper';
 import { UploadService } from '../services/upload.service';
-import { UnauthorizedError } from '../common/errors/app.error';
 
 /**
  * Controller for handling media uploads.
@@ -24,7 +23,7 @@ export class UploadController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = this.getUserId(req);
+            const userId = getAuthenticatedUserId(req);
             const file = req.file;
 
             const media = await this.uploadService.uploadImage(
@@ -53,7 +52,7 @@ export class UploadController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = this.getUserId(req);
+            const userId = getAuthenticatedUserId(req);
             const file = req.file;
 
             const media = await this.uploadService.uploadVideo(
@@ -71,17 +70,4 @@ export class UploadController {
             next(error);
         }
     };
-
-    private getUserId(req: Request): string {
-        if (req.user?.id) {
-            return req.user.id;
-        }
-
-        const decoded = getDecodedTokenFromRequest(req);
-        if (!decoded?.id) {
-            throw new UnauthorizedError('Unauthorized');
-        }
-
-        return decoded.id;
-    }
 }

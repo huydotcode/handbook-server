@@ -8,11 +8,11 @@ export class AuthController {
      * Login user
      * POST /api/v1/auth/login
      */
-    public async login(
+    public login = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const { email, password } = req.body;
 
@@ -26,17 +26,17 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
     /**
      * Send OTP to user email
      * POST /api/v1/auth/send-otp
      */
-    public async sendOTP(
+    public sendOTP = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const { email } = req.body;
 
@@ -46,17 +46,17 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
     /**
      * Verify OTP
      * POST /api/v1/auth/verify-otp
      */
-    public async verifyOTP(
+    public verifyOTP = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const { email, otp } = req.body;
 
@@ -66,17 +66,17 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 
     /**
      * Reset password
      * POST /api/v1/auth/reset-password
      */
-    public async resetPassword(
+    public resetPassword = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const { email, newPassword } = req.body;
 
@@ -86,5 +86,5 @@ export class AuthController {
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
