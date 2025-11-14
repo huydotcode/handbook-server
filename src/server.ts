@@ -1,6 +1,6 @@
 import app from './app';
-import { connectToMongo } from './services/mongodb';
-import { config } from './utils/config';
+import { config } from './common/utils/config';
+import { connectToMongo } from './common/utils/mongodb';
 
 const startServer = async () => {
     // First, connect to the database

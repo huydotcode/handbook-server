@@ -1,21 +1,27 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
-import apiRouter from './routes/api.route';
-import { connectToMongo } from './services/mongodb';
+import apiRouter from './routes/routes';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import {
+    globalErrorHandler,
+    handleUncaughtException,
+    handleUnhandledRejection,
+    notFoundHandler,
+} from './common/errors';
 import authMiddleware from './middlewares/auth.middleware';
 import authRouter from './routes/auth.route';
-import { config } from './utils/config';
+import { config } from './common/utils/config';
+import { connectToMongo } from './common/utils/mongodb';
 
 dotenv.config();
 
 const morgan = require('morgan');
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 connectToMongo();
 
@@ -32,11 +38,7 @@ app.use(morgan('dev'));
 
 app.use(
     cors({
-        origin: [
-            'http://localhost:3000',
-            'https://handbookk.vercel.app',
-            config.clientUrl,
-        ],
+        origin: [config.clientUrl],
         credentials: true,
     })
 );
@@ -47,5 +49,10 @@ app.use('/api/v1', authMiddleware, apiRouter);
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
+
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
+handleUnhandledRejection();
+handleUncaughtException();
 
 export default app;
