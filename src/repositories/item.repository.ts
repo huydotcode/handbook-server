@@ -1,5 +1,6 @@
-import { POPULATE_USER } from '../common/utils/populate';
+import { Types } from 'mongoose';
 import { PaginationResult } from '../common/types/base';
+import { POPULATE_USER } from '../common/utils/populate';
 import Item, { IItemModel } from '../models/item.model';
 import { BaseRepository } from './base.repository';
 
@@ -70,12 +71,25 @@ export class ItemRepository extends BaseRepository<IItemModel> {
      */
     async findBySeller(sellerId: string): Promise<IItemModel[]> {
         return await this.model
-            .find({ seller: sellerId })
+            .find({ seller: new Types.ObjectId(sellerId) })
             .populate('category')
             .populate('location')
             .populate('seller', POPULATE_USER)
             .populate('images')
             .sort({ createdAt: -1 })
+            .lean();
+    }
+
+    /**
+     * Find item by ID with populated relations.
+     */
+    async findByIdWithDetails(id: string): Promise<IItemModel | null> {
+        return await this.model
+            .findById(id)
+            .populate('category')
+            .populate('location')
+            .populate('seller', POPULATE_USER)
+            .populate('images')
             .lean();
     }
 }
