@@ -5,8 +5,10 @@ import commentRouter from './comment.route';
 import conversationRouter from './conversation.route';
 import followRouter from './follow.route';
 import groupRouter from './group.route';
+import imageRouter from './image.route';
 import itemRouter from './item.route';
 import locationRouter from './location.route';
+import mediaRouter from './media.route';
 import messageRouter from './message.route';
 import notificationRouter from './notification.route';
 import postRouter from './post.route';
@@ -18,6 +20,7 @@ const apiRouter = Router();
 
 // Public routes first
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/images', imageRouter);
 
 // Protected routes
 apiRouter.use('/posts', postRouter);
@@ -33,5 +36,6 @@ apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/groups', groupRouter);
 apiRouter.use('/uploads', uploadRouter);
 apiRouter.use('/categories', categoryRouter);
+apiRouter.use('/medias', mediaRouter);
 
 export default apiRouter;
