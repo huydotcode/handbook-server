@@ -9,6 +9,7 @@ export default async function authMiddleware(
     next: NextFunction
 ): Promise<void> {
     const authHeader = req.headers.authorization;
+
     if (!authHeader) {
         return ResponseUtil.unauthorized(res, 'Unauthorized');
     }
