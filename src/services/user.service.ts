@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
@@ -157,5 +158,63 @@ export class UserService extends BaseService<IUserModel> {
 
         const friends = await this.userRepository.findUserFriends(userId);
         return friends;
+    }
+
+    /**
+     * Unfriend a user (remove from friends list both ways).
+     * @param userId - User ID
+     * @param friendId - Friend ID to unfriend
+     */
+    async unfriendUser(userId: string, friendId: string): Promise<void> {
+        this.validateId(userId, 'User ID');
+        this.validateId(friendId, 'Friend ID');
+
+        // Check if users are friends
+        const user = await this.getByIdOrThrow(userId);
+        const friend = await this.getByIdOrThrow(friendId);
+
+        const userFriends = (user.friends || []).map((f) =>
+            typeof f === 'string' ? f : f.toString()
+        );
+        const friendFriends = (friend.friends || []).map((f) =>
+            typeof f === 'string' ? f : f.toString()
+        );
+
+        if (!userFriends.includes(friendId)) {
+            throw new AppError(
+                'Users are not friends',
+                HTTP_STATUS.BAD_REQUEST
+            );
+        }
+
+        // Remove from both users' friends lists
+        await this.userRepository.update(userId, {
+            $pull: { friends: new Types.ObjectId(friendId) },
+        });
+
+        await this.userRepository.update(friendId, {
+            $pull: { friends: new Types.ObjectId(userId) },
+        });
+    }
+
+    /**
+     * Update user avatar
+     * @param userId - User ID
+     * @param avatar - Avatar URL or image ID
+     * @param currentUserId - Current user ID
+     * @returns Updated user
+     */
+    async updateAvatar(
+        userId: string,
+        avatar: string,
+        currentUserId: string
+    ): Promise<IUserModel> {
+        this.validateId(userId, 'User ID');
+
+        if (!avatar || avatar.trim().length === 0) {
+            throw new AppError('Avatar is required', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        return await this.updateUser(userId, { avatar }, currentUserId);
     }
 }
