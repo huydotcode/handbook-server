@@ -1,10 +1,11 @@
 import { NextFunction, Request, Response } from 'express';
-import { ResponseUtil } from '../common/utils/response';
 import {
-    getPaginationParams,
     getAuthenticatedUserId,
+    getPaginationParams,
+    validateRequiredBodyField,
     validateRequiredParam,
 } from '../common/utils/controller.helper';
+import { ResponseUtil } from '../common/utils/response';
 import { MessageService } from '../services/message.service';
 
 /**
@@ -110,6 +111,57 @@ export class MessageController {
                 );
 
             ResponseUtil.success(res, messages, 'Messages found successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/v1/messages
+     * Send a new message.
+     */
+    public sendMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const messageData = req.body;
+            validateRequiredBodyField(req.body, 'conversation');
+
+            const message = await this.messageService.createMessage(
+                messageData,
+                userId
+            );
+
+            ResponseUtil.created(res, message, 'Message sent successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/messages/:id
+     * Delete a message (sender only).
+     */
+    public deleteMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const messageId = req.params.id;
+            validateRequiredParam(messageId, 'Message ID');
+            const userId = getAuthenticatedUserId(req);
+
+            await this.messageService.deleteMessage(messageId, userId);
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Message deleted successfully'
+            );
         } catch (error) {
             next(error);
         }

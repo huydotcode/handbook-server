@@ -1,9 +1,10 @@
-import { AppError, NotFoundError } from '../common/errors/app.error';
+import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError, NotFoundError } from '../common/errors/app.error';
+import Conversation from '../models/conversation.model';
 import { IMessageModel } from '../models/message.model';
 import { MessageRepository } from '../repositories/message.repository';
 import { BaseService } from './base.service';
-import Conversation from '../models/conversation.model';
 
 /**
  * Service responsible for message-related business logic.
@@ -25,10 +26,45 @@ export class MessageService extends BaseService<IMessageModel> {
      */
     async createMessage(data: any, userId: string) {
         // Validate required fields
-        this.validateRequiredFields(data, ['sender', 'conversation']);
+        this.validateRequiredFields(data, ['conversation']);
+
+        // Verify user has access to conversation first
+        await this.ensureConversationAccess(data.conversation, userId);
 
         // Set sender from userId
-        data.sender = userId;
+        data.sender = new Types.ObjectId(userId);
+
+        // Convert conversation to ObjectId if needed
+        if (typeof data.conversation === 'string') {
+            data.conversation = new Types.ObjectId(data.conversation);
+        }
+
+        // Convert media array to ObjectId array if provided
+        if (data.media && Array.isArray(data.media)) {
+            data.media = data.media.map((id: string) => new Types.ObjectId(id));
+        } else if (!data.media) {
+            data.media = [];
+        }
+
+        // Set default values
+        if (data.text === undefined || data.text === null) {
+            data.text = '';
+        }
+
+        // Validate: at least text or media must be provided
+        if (
+            (!data.text || data.text.trim().length === 0) &&
+            (!data.media || data.media.length === 0)
+        ) {
+            throw new AppError(
+                'Message must have either text or media',
+                HTTP_STATUS.BAD_REQUEST
+            );
+        }
+
+        if (data.isPin === undefined) {
+            data.isPin = false;
+        }
 
         return await this.create(data, userId);
     }
@@ -39,9 +75,9 @@ export class MessageService extends BaseService<IMessageModel> {
      * @returns Array of messages
      */
     async getMessagesByConversation(conversationId: string) {
-        this.validateId(conversationId);
+        this.validateId(conversationId, 'Conversation ID');
         return await this.messageRepository.findManyWithSort(
-            { conversation: conversationId },
+            { conversation: new Types.ObjectId(conversationId) },
             { createdAt: -1 }
         );
     }
@@ -121,8 +157,8 @@ export class MessageService extends BaseService<IMessageModel> {
         this.validateId(userId, 'User ID');
 
         const conversation = await Conversation.findOne({
-            _id: conversationId,
-            participants: { $in: [userId] },
+            _id: new Types.ObjectId(conversationId),
+            participants: { $in: [new Types.ObjectId(userId)] },
         })
             .lean()
             .exec();
@@ -185,14 +221,17 @@ export class MessageService extends BaseService<IMessageModel> {
      * @returns Updated message
      */
     async markAsRead(messageId: string, userId: string) {
-        this.validateId(messageId);
-        this.validateId(userId);
+        this.validateId(messageId, 'Message ID');
+        this.validateId(userId, 'User ID');
 
         const message = await this.messageRepository.findOneAndUpdate(
             { _id: messageId },
             {
                 $addToSet: {
-                    readBy: { user: userId, readAt: new Date() },
+                    readBy: {
+                        user: new Types.ObjectId(userId),
+                        readAt: new Date(),
+                    },
                 },
             }
         );
@@ -202,5 +241,38 @@ export class MessageService extends BaseService<IMessageModel> {
         }
 
         return message;
+    }
+
+    /**
+     * Delete message (sender only)
+     * @param messageId - Message ID
+     * @param userId - User ID performing the action
+     * @returns True if deleted
+     */
+    async deleteMessage(messageId: string, userId: string): Promise<boolean> {
+        this.validateId(messageId, 'Message ID');
+        this.validateId(userId, 'User ID');
+
+        // Get message and verify user is sender
+        const message = await this.getByIdOrThrow(messageId);
+
+        const senderId =
+            typeof message.sender === 'string'
+                ? message.sender
+                : message.sender.toString();
+        if (senderId !== userId) {
+            throw new AppError(
+                'Only the sender can delete this message',
+                HTTP_STATUS.FORBIDDEN
+            );
+        }
+
+        // Delete message
+        const deleted = await this.delete(messageId, userId);
+        if (!deleted) {
+            throw new NotFoundError(`Message not found with id: ${messageId}`);
+        }
+
+        return true;
     }
 }

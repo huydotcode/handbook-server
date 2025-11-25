@@ -7,6 +7,7 @@ const messageRouter = Router();
 const messageController = new MessageController();
 
 const messageRoutes: IApiRoute[] = [
+    // Specific routes first
     {
         path: '/conversation/:conversationId/search',
         method: EApiMethod.GET,
@@ -25,6 +26,22 @@ const messageRoutes: IApiRoute[] = [
         path: '/conversation/:conversationId',
         method: EApiMethod.GET,
         controller: messageController.getMessages,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: messageController.sendMessage,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: messageController.deleteMessage,
         isPrivateRoute: true,
         isRateLimited: true,
     },

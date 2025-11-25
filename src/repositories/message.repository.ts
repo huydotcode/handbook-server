@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import Message, { IMessageModel } from '../models/message.model';
 import { BaseRepository } from './base.repository';
 import { POPULATE_USER } from '../common/utils/populate';
@@ -23,6 +24,11 @@ export class MessageRepository extends BaseRepository<IMessageModel> {
         pageSize: number
     ): Promise<PaginationResult<IMessageModel>> {
         const skip = (page - 1) * pageSize;
+
+        // Convert conversation to ObjectId if it's a string
+        if (filter.conversation && typeof filter.conversation === 'string') {
+            filter.conversation = new Types.ObjectId(filter.conversation);
+        }
 
         const [messages, total] = await Promise.all([
             this.model
@@ -64,7 +70,7 @@ export class MessageRepository extends BaseRepository<IMessageModel> {
     ): Promise<IMessageModel[]> {
         return await this.model
             .find({
-                conversation: conversationId,
+                conversation: new Types.ObjectId(conversationId),
                 text: { $regex: keyword, $options: 'i' },
             })
             .populate('sender', POPULATE_USER)
