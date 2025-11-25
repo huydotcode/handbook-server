@@ -1,15 +1,19 @@
-import { NotFoundError } from '../common/errors/app.error';
+import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError, NotFoundError } from '../common/errors/app.error';
 import { IProfileModel } from '../models/profile.model';
 import { ProfileRepository } from '../repositories/profile.repository';
+import { UserService } from './user.service';
 import { BaseService } from './base.service';
 
 export class ProfileService extends BaseService<IProfileModel> {
     private profileRepository: ProfileRepository;
+    private userService: UserService;
 
     constructor() {
         const repository = new ProfileRepository();
         super(repository);
         this.profileRepository = repository;
+        this.userService = new UserService();
     }
 
     /**
@@ -55,18 +59,149 @@ export class ProfileService extends BaseService<IProfileModel> {
     ) {
         this.validateId(userId);
 
+        // Verify user exists
+        await this.userService.getByIdOrThrow(userId);
+
         // Don't allow changing user
         delete data.user;
 
-        const profile = await this.profileRepository.findOneAndUpdate(
-            { user: userId },
-            data
-        );
+        // Try to find existing profile
+        let profile = await this.profileRepository.findOne({ user: userId });
+
+        if (!profile) {
+            // Create profile if it doesn't exist
+            profile = await this.create(
+                {
+                    user: userId as any,
+                    ...data,
+                },
+                currentUserId
+            );
+        } else {
+            // Update existing profile
+            profile = await this.profileRepository.findOneAndUpdate(
+                { user: userId },
+                data
+            );
+        }
 
         if (!profile) {
             throw new NotFoundError(`Profile not found with userId: ${userId}`);
         }
 
         return profile;
+    }
+
+    /**
+     * Get or create profile by user ID
+     * @param userId - User ID
+     * @returns Profile
+     */
+    async getOrCreateProfileByUserId(userId: string): Promise<IProfileModel> {
+        this.validateId(userId);
+
+        // Verify user exists
+        await this.userService.getByIdOrThrow(userId);
+
+        let profile = await this.profileRepository.findOne({ user: userId });
+
+        if (!profile) {
+            // Create default profile if it doesn't exist
+            profile = await this.create(
+                {
+                    user: userId as any,
+                    bio: '',
+                    coverPhoto: '',
+                    work: '',
+                    education: '',
+                    location: '',
+                    dateOfBirth: undefined,
+                },
+                userId
+            );
+        }
+
+        return profile;
+    }
+
+    /**
+     * Get combined user and profile data
+     * @param userId - User ID
+     * @returns Combined user and profile data
+     */
+    async getUserProfile(userId: string) {
+        this.validateId(userId, 'User ID');
+
+        const user = await this.userService.getByIdOrThrow(userId);
+        const profile = await this.getOrCreateProfileByUserId(userId);
+
+        return {
+            user: {
+                _id: user._id,
+                email: user.email,
+                username: user.username,
+                name: user.name,
+                avatar: user.avatar,
+                role: user.role,
+                givenName: user.givenName,
+                familyName: user.familyName,
+                locale: user.locale,
+                followersCount: user.followersCount,
+                isOnline: user.isOnline,
+                isBlocked: user.isBlocked,
+                isVerified: user.isVerified,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            },
+            profile: {
+                _id: profile._id,
+                bio: profile.bio,
+                coverPhoto: profile.coverPhoto,
+                work: profile.work,
+                education: profile.education,
+                location: profile.location,
+                dateOfBirth: profile.dateOfBirth,
+                createdAt: profile.createdAt,
+                updatedAt: profile.updatedAt,
+            },
+        };
+    }
+
+    /**
+     * Update bio
+     * @param userId - User ID
+     * @param bio - Bio text
+     * @param currentUserId - Current user ID
+     * @returns Updated profile
+     */
+    async updateBio(
+        userId: string,
+        bio: string,
+        currentUserId: string
+    ): Promise<IProfileModel> {
+        this.validateId(userId, 'User ID');
+
+        return await this.updateProfileByUserId(userId, { bio }, currentUserId);
+    }
+
+    /**
+     * Update cover photo
+     * @param userId - User ID
+     * @param coverPhoto - Cover photo URL
+     * @param currentUserId - Current user ID
+     * @returns Updated profile
+     */
+    async updateCoverPhoto(
+        userId: string,
+        coverPhoto: string,
+        currentUserId: string
+    ): Promise<IProfileModel> {
+        this.validateId(userId, 'User ID');
+
+        return await this.updateProfileByUserId(
+            userId,
+            { coverPhoto },
+            currentUserId
+        );
     }
 }
