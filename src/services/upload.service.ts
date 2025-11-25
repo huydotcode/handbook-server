@@ -1,7 +1,12 @@
 import { cloudinaryClient } from '../common/config/cloudinary';
 import { MediaService } from './media.service';
-import { ValidationError } from '../common/errors/app.error';
+import {
+    ValidationError,
+    NotFoundError,
+    AppError,
+} from '../common/errors/app.error';
 import { IMediaModel } from '../models/media.model';
+import { HTTP_STATUS } from '../common/constants/status-code';
 
 export interface UploadPayload {
     buffer: Buffer;
@@ -116,6 +121,89 @@ export class UploadService {
         const maxSize = 50 * 1024 * 1024; // 50MB
         if (file.size > maxSize) {
             throw new ValidationError('File size exceeds the limit of 50MB');
+        }
+    }
+
+    /**
+     * Get image URL by ID
+     * @param imageId - Image ID
+     * @returns Image URL
+     */
+    async getImageById(imageId: string): Promise<{ url: string }> {
+        const media = await this.mediaService.getMediaById(imageId);
+        return { url: media.url };
+    }
+
+    /**
+     * Delete image from Cloudinary by URL
+     * @param imageUrl - Image URL
+     * @param userId - User ID performing the action
+     * @returns True if deleted
+     */
+    async deleteImageByUrl(imageUrl: string, userId: string): Promise<boolean> {
+        if (!imageUrl || imageUrl.trim().length === 0) {
+            throw new ValidationError('Image URL is required');
+        }
+
+        // Extract public_id from URL
+        const publicId = this.extractPublicIdFromUrl(imageUrl);
+
+        if (!publicId) {
+            throw new AppError('Invalid image URL', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        // Delete from Cloudinary
+        return await new Promise((resolve, reject) => {
+            cloudinaryClient.uploader.destroy(publicId, (error, result) => {
+                if (error) {
+                    reject(
+                        new AppError(
+                            `Failed to delete image: ${error.message}`,
+                            HTTP_STATUS.INTERNAL_SERVER_ERROR
+                        )
+                    );
+                } else {
+                    // Also delete from database if media exists
+                    this.mediaService.deleteMediaByUrl(imageUrl).catch(() => {
+                        // Ignore database deletion errors
+                    });
+                    resolve(result.result === 'ok');
+                }
+            });
+        });
+    }
+
+    /**
+     * Extract public_id from Cloudinary URL
+     * @param url - Cloudinary URL
+     * @returns Public ID or null
+     */
+    private extractPublicIdFromUrl(url: string): string | null {
+        try {
+            // Cloudinary URL format: https://res.cloudinary.com/{cloud_name}/{resource_type}/{type}/v{version}/{public_id}.{format}
+            // Example: https://res.cloudinary.com/demo/image/upload/v1234567890/sample.jpg
+            const urlParts = url.split('/');
+            const uploadIndex = urlParts.findIndex((part) => part === 'upload');
+            if (uploadIndex === -1) {
+                return null;
+            }
+
+            // Get parts after 'upload' and before the file extension
+            const afterUpload = urlParts.slice(uploadIndex + 2); // Skip 'upload' and version
+            if (afterUpload.length === 0) {
+                return null;
+            }
+
+            // Join and remove file extension
+            let publicId = afterUpload.join('/');
+            const lastDotIndex = publicId.lastIndexOf('.');
+            if (lastDotIndex !== -1) {
+                publicId = publicId.substring(0, lastDotIndex);
+            }
+
+            return publicId;
+        } catch (error) {
+            return null;
         }
     }
 }

@@ -1,7 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { getAuthenticatedUserId } from '../common/utils/controller.helper';
+import {
+    getAuthenticatedUserId,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
 import { UploadService } from '../services/upload.service';
+import { AppError } from '../common/errors/app.error';
+import { HTTP_STATUS } from '../common/constants/status-code';
 
 /**
  * Controller for handling media uploads.
@@ -66,6 +71,63 @@ export class UploadController {
             );
 
             ResponseUtil.created(res, media, 'Video uploaded successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/images/:id
+     * Get image URL by ID.
+     */
+    public getImageById = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const imageId = req.params.id;
+            validateRequiredParam(imageId, 'Image ID');
+
+            const result = await this.uploadService.getImageById(imageId);
+
+            ResponseUtil.success(
+                res,
+                result,
+                'Image URL retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/images?url=:imageUrl
+     * Delete image from Cloudinary.
+     */
+    public deleteImageByUrl = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const imageUrl = req.query.url as string;
+            if (!imageUrl) {
+                throw new AppError(
+                    'Image URL is required',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
+
+            const userId = getAuthenticatedUserId(req);
+
+            await this.uploadService.deleteImageByUrl(imageUrl, userId);
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Image deleted successfully'
+            );
         } catch (error) {
             next(error);
         }
