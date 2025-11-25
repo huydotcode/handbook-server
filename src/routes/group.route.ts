@@ -7,15 +7,89 @@ const groupRouter = Router();
 const groupController = new GroupController();
 
 const groupRoutes: IApiRoute[] = [
+    // Specific routes first
+    {
+        path: '/:id/avatar',
+        method: EApiMethod.PUT,
+        controller: groupController.updateAvatar,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/cover-photo',
+        method: EApiMethod.PUT,
+        controller: groupController.updateCoverPhoto,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/members',
+        method: EApiMethod.GET,
+        controller: groupController.getGroupMembers,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/join',
+        method: EApiMethod.POST,
+        controller: groupController.joinGroup,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/leave',
+        method: EApiMethod.POST,
+        controller: groupController.leaveGroup,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/recommended',
+        method: EApiMethod.GET,
+        controller: groupController.getRecommendedGroups,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
     {
         path: '/joined',
         method: EApiMethod.GET,
         controller: groupController.getJoinedGroups,
+        isRateLimited: true,
+    },
+    // Collection routes (admin route must be before general GET /)
+    {
+        path: '/',
+        method: EApiMethod.GET,
+        controller: groupController.getAllGroups,
+        isAdminRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: groupController.createGroup,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.PUT,
+        controller: groupController.updateGroup,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: groupController.deleteGroup,
+        isPrivateRoute: true,
+        isRateLimited: true,
     },
     {
         path: '/:id',
         method: EApiMethod.GET,
         controller: groupController.getGroupByGroupId,
+        isRateLimited: true,
     },
 ];
 
