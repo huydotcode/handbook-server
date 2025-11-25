@@ -7,12 +7,7 @@ const itemRouter = Router();
 const itemController = new ItemController();
 
 const itemRoutes: IApiRoute[] = [
-    {
-        path: '/search',
-        method: EApiMethod.GET,
-        controller: itemController.searchItems,
-        isRateLimited: true,
-    },
+    // Specific routes first
     {
         path: '/seller/:sellerId',
         method: EApiMethod.GET,
@@ -20,9 +15,44 @@ const itemRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/search',
+        method: EApiMethod.GET,
+        controller: itemController.searchItems,
+        isRateLimited: true,
+    },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: itemController.createItem,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/',
         method: EApiMethod.GET,
         controller: itemController.getAllItems,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.PUT,
+        controller: itemController.updateItem,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: itemController.deleteItem,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id',
+        method: EApiMethod.GET,
+        controller: itemController.getItemById,
         isRateLimited: true,
     },
 ];
