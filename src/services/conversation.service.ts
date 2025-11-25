@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import {
     AppError,
@@ -451,6 +452,144 @@ export class ConversationService extends BaseService<IConversationModel> {
             }
             throw new AppError(
                 `Failed to update last message: ${
+                    error instanceof Error ? error.message : 'Unknown error'
+                }`,
+                HTTP_STATUS.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get conversations by group ID with pagination
+     * @param groupId - Group ID
+     * @param params - Pagination parameters
+     * @returns Paginated conversations
+     */
+    async getConversationsByGroup(
+        groupId: string,
+        params: PaginationParams
+    ): Promise<PaginationResult<IConversationModel>> {
+        try {
+            this.validateId(groupId, 'Group ID');
+
+            const { page = 1, pageSize = 20 } = params;
+
+            const result =
+                await this.conversationRepository.findByGroupWithPagination(
+                    groupId,
+                    page,
+                    pageSize
+                );
+
+            return result as PaginationResult<IConversationModel>;
+        } catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
+            throw new AppError(
+                `Failed to get conversations by group: ${
+                    error instanceof Error ? error.message : 'Unknown error'
+                }`,
+                HTTP_STATUS.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Get or create private conversation between two users
+     * @param userId - First user ID
+     * @param friendId - Second user ID
+     * @returns Conversation with isNew flag
+     */
+    async getPrivateConversation(
+        userId: string,
+        friendId: string
+    ): Promise<{ isNew: boolean; conversation: IConversationModel }> {
+        try {
+            this.validateId(userId, 'User ID');
+            this.validateId(friendId, 'Friend ID');
+
+            if (userId === friendId) {
+                throw new AppError(
+                    'Cannot create conversation with yourself',
+                    HTTP_STATUS.BAD_REQUEST
+                );
+            }
+
+            // Try to find existing private conversation
+            let conversation =
+                await this.conversationRepository.findPrivateConversation(
+                    userId,
+                    friendId
+                );
+
+            let isNew = false;
+
+            // If not found, create a new one
+            if (!conversation) {
+                isNew = true;
+                conversation = await this.createConversation(
+                    {
+                        participants: [
+                            new Types.ObjectId(userId),
+                            new Types.ObjectId(friendId),
+                        ],
+                        type: EConversationType.PRIVATE,
+                    },
+                    userId
+                );
+            }
+
+            return {
+                isNew,
+                conversation: conversation as IConversationModel,
+            };
+        } catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
+            throw new AppError(
+                `Failed to get private conversation: ${
+                    error instanceof Error ? error.message : 'Unknown error'
+                }`,
+                HTTP_STATUS.INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    /**
+     * Restore conversation (undelete) for user
+     * @param conversationId - Conversation ID
+     * @param userId - User ID
+     * @returns Restored conversation
+     */
+    async restoreConversation(
+        conversationId: string,
+        userId: string
+    ): Promise<IConversationModel> {
+        try {
+            this.validateId(conversationId, 'Conversation ID');
+            this.validateId(userId, 'User ID');
+
+            const conversation =
+                await this.conversationRepository.restoreConversation(
+                    conversationId,
+                    userId
+                );
+
+            if (!conversation) {
+                throw new NotFoundError(
+                    `Conversation not found with id: ${conversationId}`
+                );
+            }
+
+            return conversation as IConversationModel;
+        } catch (error) {
+            if (error instanceof NotFoundError || error instanceof AppError) {
+                throw error;
+            }
+            throw new AppError(
+                `Failed to restore conversation: ${
                     error instanceof Error ? error.message : 'Unknown error'
                 }`,
                 HTTP_STATUS.INTERNAL_SERVER_ERROR

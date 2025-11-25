@@ -1,3 +1,5 @@
+import { Types } from 'mongoose';
+import { PaginationResult } from '../common/types/base';
 import Conversation, { IConversationModel } from '../models/conversation.model';
 import { BaseRepository } from './base.repository';
 
@@ -229,5 +231,170 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
             })
             .lean();
         return !!conversation;
+    }
+
+    /**
+     * Find conversations by group ID with pagination
+     * @param groupId - Group ID
+     * @param page - Page number
+     * @param pageSize - Page size
+     * @returns Paginated conversations
+     */
+    async findByGroupWithPagination(
+        groupId: string,
+        page: number = 1,
+        pageSize: number = 20
+    ): Promise<PaginationResult<IConversationModel>> {
+        const skip = (page - 1) * pageSize;
+
+        const [data, total] = await Promise.all([
+            this.model
+                .find({
+                    group: new Types.ObjectId(groupId),
+                })
+                .sort({ updatedAt: -1 })
+                .skip(skip)
+                .limit(pageSize)
+                .populate(
+                    'participants',
+                    'name username avatar lastAccessed isOnline'
+                )
+                .populate('creator', 'name username avatar')
+                .populate({
+                    path: 'lastMessage',
+                    populate: [
+                        {
+                            path: 'sender',
+                            select: 'name username avatar',
+                        },
+                        {
+                            path: 'readBy.user',
+                            select: 'name username avatar',
+                        },
+                    ],
+                })
+                .populate('avatar')
+                .populate({
+                    path: 'group',
+                    populate: [
+                        { path: 'avatar' },
+                        {
+                            path: 'members.user',
+                            select: 'name username avatar',
+                        },
+                        { path: 'creator', select: 'name username avatar' },
+                    ],
+                })
+                .lean(),
+            this.model.countDocuments({
+                group: new Types.ObjectId(groupId),
+            }),
+        ]);
+
+        const totalPages = Math.ceil(total / pageSize) || 1;
+
+        return {
+            data: data as IConversationModel[],
+            pagination: {
+                page,
+                pageSize,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            },
+        };
+    }
+
+    /**
+     * Find private conversation between two users
+     * @param userId1 - First user ID
+     * @param userId2 - Second user ID
+     * @returns Conversation or null
+     */
+    async findPrivateConversation(
+        userId1: string,
+        userId2: string
+    ): Promise<IConversationModel | null> {
+        return await this.model
+            .findOne({
+                type: 'private',
+                participants: {
+                    $all: [
+                        new Types.ObjectId(userId1),
+                        new Types.ObjectId(userId2),
+                    ],
+                    $size: 2,
+                },
+            })
+            .populate(
+                'participants',
+                'name username avatar lastAccessed isOnline'
+            )
+            .populate('creator', 'name username avatar')
+            .populate({
+                path: 'lastMessage',
+                populate: [
+                    {
+                        path: 'sender',
+                        select: 'name username avatar',
+                    },
+                    {
+                        path: 'readBy.user',
+                        select: 'name username avatar',
+                    },
+                ],
+            })
+            .populate('avatar')
+            .lean();
+    }
+
+    /**
+     * Restore conversation (undelete) for user
+     * @param conversationId - Conversation ID
+     * @param userId - User ID
+     * @returns Updated conversation
+     */
+    async restoreConversation(
+        conversationId: string,
+        userId: string
+    ): Promise<IConversationModel | null> {
+        return await this.model
+            .findByIdAndUpdate(
+                conversationId,
+                { $pull: { isDeletedBy: new Types.ObjectId(userId) } },
+                { new: true }
+            )
+            .populate(
+                'participants',
+                'name username avatar lastAccessed isOnline'
+            )
+            .populate('creator', 'name username avatar')
+            .populate({
+                path: 'lastMessage',
+                populate: [
+                    {
+                        path: 'sender',
+                        select: 'name username avatar',
+                    },
+                    {
+                        path: 'readBy.user',
+                        select: 'name username avatar',
+                    },
+                ],
+            })
+            .populate('avatar')
+            .populate({
+                path: 'group',
+                populate: [
+                    { path: 'avatar' },
+                    {
+                        path: 'members.user',
+                        select: 'name username avatar',
+                    },
+                    { path: 'creator', select: 'name username avatar' },
+                ],
+            })
+            .lean();
     }
 }

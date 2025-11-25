@@ -9,6 +9,20 @@ const conversationController = new ConversationController();
 const conversationRoutes: IApiRoute[] = [
     // Specific routes first
     {
+        path: '/private',
+        method: EApiMethod.GET,
+        controller: conversationController.getPrivateConversation,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/restore',
+        method: EApiMethod.POST,
+        controller: conversationController.restoreConversation,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/:id/participants/:participantId',
         method: EApiMethod.DELETE,
         controller: conversationController.removeParticipant,

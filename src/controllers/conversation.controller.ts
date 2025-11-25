@@ -45,8 +45,8 @@ export class ConversationController {
     };
 
     /**
-     * GET /api/v1/conversations?user_id=:userId
-     * Get conversations by participant with pagination
+     * GET /api/v1/conversations?user_id=:userId&group_id=:groupId
+     * Get conversations by participant or group with pagination
      */
     public getConversations = async (
         req: Request,
@@ -54,26 +54,49 @@ export class ConversationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId =
-                (req.query.user_id as string) || getAuthenticatedUserId(req);
-            validateRequiredParam(userId, 'User ID');
+            const groupId = req.query.group_id as string;
             const { page, pageSize } = getPaginationParams(req, 20);
 
-            const result =
-                await this.conversationService.getConversationsByParticipant(
-                    userId,
-                    {
-                        page,
-                        pageSize,
-                    }
-                );
+            if (groupId) {
+                // Get conversations by group ID
+                const result =
+                    await this.conversationService.getConversationsByGroup(
+                        groupId,
+                        {
+                            page,
+                            pageSize,
+                        }
+                    );
 
-            ResponseUtil.paginated(
-                res,
-                result.data,
-                result.pagination,
-                'Conversations retrieved successfully'
-            );
+                ResponseUtil.paginated(
+                    res,
+                    result.data,
+                    result.pagination,
+                    'Conversations retrieved successfully'
+                );
+            } else {
+                // Get conversations by participant
+                const userId =
+                    (req.query.user_id as string) ||
+                    getAuthenticatedUserId(req);
+                validateRequiredParam(userId, 'User ID');
+
+                const result =
+                    await this.conversationService.getConversationsByParticipant(
+                        userId,
+                        {
+                            page,
+                            pageSize,
+                        }
+                    );
+
+                ResponseUtil.paginated(
+                    res,
+                    result.data,
+                    result.pagination,
+                    'Conversations retrieved successfully'
+                );
+            }
         } catch (error) {
             next(error);
         }
@@ -287,6 +310,67 @@ export class ConversationController {
             );
 
             ResponseUtil.deleted(res, 'Conversation deleted successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/conversations/private?user_id=:userId&friend_id=:friendId
+     * Get or create private conversation between two users
+     */
+    public getPrivateConversation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId =
+                (req.query.user_id as string) || getAuthenticatedUserId(req);
+            const friendId = req.query.friend_id as string;
+            validateRequiredParam(userId, 'User ID');
+            validateRequiredParam(friendId, 'Friend ID');
+
+            const result =
+                await this.conversationService.getPrivateConversation(
+                    userId,
+                    friendId
+                );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.isNew
+                    ? 'Private conversation created successfully'
+                    : 'Private conversation retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/v1/conversations/:id/restore
+     * Restore conversation (undelete) for user
+     */
+    public restoreConversation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const id = req.params.id;
+            validateRequiredParam(id, 'Conversation ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const conversation =
+                await this.conversationService.restoreConversation(id, userId);
+
+            ResponseUtil.success(
+                res,
+                conversation,
+                'Conversation restored successfully'
+            );
         } catch (error) {
             next(error);
         }
