@@ -9,6 +9,34 @@ const postController = new PostController();
 const postRoutes: IApiRoute[] = [
     // Specific routes first
     {
+        path: '/:id/save',
+        method: EApiMethod.DELETE,
+        controller: postController.unsavePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/save',
+        method: EApiMethod.POST,
+        controller: postController.savePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/share',
+        method: EApiMethod.POST,
+        controller: postController.sharePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/like',
+        method: EApiMethod.POST,
+        controller: postController.likePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/new-feed',
         method: EApiMethod.GET,
         controller: postController.getNewFeedPosts,

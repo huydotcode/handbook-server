@@ -166,6 +166,30 @@ export class PostService extends BaseService<IPostModel> {
     }
 
     /**
+     * Decrement post interaction count
+     * @param postId - Post ID
+     * @param field - Field to decrement (lovesCount, sharesCount, commentsCount)
+     * @returns Updated post
+     */
+    async decrementPostCount(
+        postId: string,
+        field: 'lovesCount' | 'sharesCount' | 'commentsCount'
+    ) {
+        this.validateId(postId);
+
+        const post = await this.postRepository.findOneAndUpdate(
+            { _id: postId },
+            { $inc: { [field]: -1 } }
+        );
+
+        if (!post) {
+            throw new NotFoundError(`Post not found with id: ${postId}`);
+        }
+
+        return post;
+    }
+
+    /**
      * Get post by ID with interaction flags.
      * @param postId - Post ID
      * @param userId - User ID to check interactions

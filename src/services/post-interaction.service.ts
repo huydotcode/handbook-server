@@ -5,15 +5,18 @@ import {
     IPostInteractionModel,
 } from '../models/post-interaction.model';
 import { PostInteractionRepository } from '../repositories/post-interaction.repository';
+import { PostService } from './post.service';
 import { BaseService } from './base.service';
 
 export class PostInteractionService extends BaseService<IPostInteractionModel> {
     private postInteractionRepository: PostInteractionRepository;
+    private postService: PostService;
 
     constructor() {
         const repository = new PostInteractionRepository();
         super(repository);
         this.postInteractionRepository = repository;
+        this.postService = new PostService();
     }
 
     /**
@@ -65,6 +68,18 @@ export class PostInteractionService extends BaseService<IPostInteractionModel> {
                     `Interaction not found with id: ${existingInteraction._id}`
                 );
             }
+
+            // Update post counts (decrement)
+            if (type === EPostInteractionType.LOVE) {
+                await this.postService.decrementPostCount(postId, 'lovesCount');
+            } else if (type === EPostInteractionType.SHARE) {
+                await this.postService.decrementPostCount(
+                    postId,
+                    'sharesCount'
+                );
+            }
+            // Note: SAVE doesn't have a count field in Post model
+
             return { action: 'removed', interaction: null };
         } else {
             // Create interaction
@@ -76,6 +91,18 @@ export class PostInteractionService extends BaseService<IPostInteractionModel> {
                 },
                 userId
             );
+
+            // Update post counts (increment)
+            if (type === EPostInteractionType.LOVE) {
+                await this.postService.incrementPostCount(postId, 'lovesCount');
+            } else if (type === EPostInteractionType.SHARE) {
+                await this.postService.incrementPostCount(
+                    postId,
+                    'sharesCount'
+                );
+            }
+            // Note: SAVE doesn't have a count field in Post model
+
             return { action: 'added', interaction };
         }
     }

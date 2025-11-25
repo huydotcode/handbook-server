@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { PostService } from '../services';
+import { PostService, PostInteractionService } from '../services';
 import { ResponseUtil } from '../common/utils/response';
 import {
     getPaginationParams,
@@ -10,15 +10,18 @@ import {
 } from '../common/utils/controller.helper';
 import { UnauthorizedError } from '../common/errors/app.error';
 import { EPostStatus } from '../models/post.model';
+import { EPostInteractionType } from '../models/post-interaction.model';
 
 /**
  * Controller for post-related HTTP handlers.
  */
 export class PostController {
     private postService: PostService;
+    private postInteractionService: PostInteractionService;
 
     constructor() {
         this.postService = new PostService();
+        this.postInteractionService = new PostInteractionService();
     }
 
     /**
@@ -378,6 +381,148 @@ export class PostController {
                 result.data,
                 result.pagination,
                 'Saved posts retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/like
+     * Toggle like on a post.
+     */
+    public likePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.LOVE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post liked successfully'
+                    : 'Post unliked successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/share
+     * Toggle share on a post.
+     */
+    public sharePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SHARE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post shared successfully'
+                    : 'Post unshared successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/save
+     * Save a post.
+     */
+    public savePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post saved successfully'
+                    : 'Post unsaved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/posts/:id/save
+     * Unsave a post.
+     */
+    public unsavePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            // Check if post is saved
+            const isSaved = await this.postInteractionService.hasUserInteracted(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            if (!isSaved) {
+                ResponseUtil.success(
+                    res,
+                    { success: true },
+                    'Post is not saved'
+                );
+                return;
+            }
+
+            await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Post unsaved successfully'
             );
         } catch (error) {
             next(error);
