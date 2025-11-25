@@ -7,6 +7,14 @@ const locationRouter = Router();
 const locationController = new LocationController();
 
 const locationRoutes: IApiRoute[] = [
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: locationController.createLocation,
+        isAdminRoute: true,
+        isRateLimited: true,
+    },
     {
         path: '/',
         method: EApiMethod.GET,
