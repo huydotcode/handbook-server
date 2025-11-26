@@ -95,6 +95,9 @@ export class PostRepository extends BaseRepository<IPostModel> {
             .sort({ createdAt: -1 })
             .skip((page - 1) * pageSize)
             .limit(pageSize)
+            .populate('media')
+            .populate('author', POPULATE_USER)
+            .populate(POPULATE_GROUP)
             .lean<IPostWithInteraction[]>();
 
         const totalPosts = await this.model.countDocuments(filter);
@@ -111,9 +114,13 @@ export class PostRepository extends BaseRepository<IPostModel> {
             },
         }).lean();
 
-        const interactionMap = new Map();
+        const interactionMap = new Map<string, Set<EPostInteractionType>>();
         interactions.forEach((interaction) => {
-            interactionMap.set(interaction.post.toString(), interaction.type);
+            const key = interaction.post.toString();
+            if (!interactionMap.has(key)) {
+                interactionMap.set(key, new Set());
+            }
+            interactionMap.get(key)?.add(interaction.type);
         });
 
         const postsWithInteraction = posts.map((post) => ({
@@ -126,15 +133,23 @@ export class PostRepository extends BaseRepository<IPostModel> {
             commentsCount: post.commentsCount,
             lovesCount: post.lovesCount,
             sharesCount: post.sharesCount,
-            userHasLoved:
-                interactionMap.get(post._id.toString()) ===
-                EPostInteractionType.LOVE,
-            userHasShared:
-                interactionMap.get(post._id.toString()) ===
-                EPostInteractionType.SHARE,
-            userHasSaved:
-                interactionMap.get(post._id.toString()) ===
-                EPostInteractionType.SAVE,
+            userHasLoved: interactionMap
+                .get(post._id.toString())
+                ?.has(EPostInteractionType.LOVE)
+                ? true
+                : false,
+            userHasShared: interactionMap
+                .get(post._id.toString())
+                ?.has(EPostInteractionType.SHARE)
+                ? true
+                : false,
+            userHasSaved: interactionMap
+                .get(post._id.toString())
+                ?.has(EPostInteractionType.SAVE)
+                ? true
+                : false,
+            createdAt: post.createdAt,
+            updatedAt: post.updatedAt,
         })) as IPostWithInteraction[];
 
         return {
