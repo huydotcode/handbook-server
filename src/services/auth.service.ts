@@ -73,7 +73,11 @@ export class AuthService {
             throw new NotFoundError('Tài khoản không tồn tại');
         }
 
-        const isValid = await user.comparePassword(password);
+        if (!user.password || !password) {
+            throw new UnauthorizedError('Mật khẩu không chính xác');
+        }
+
+        const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
             throw new UnauthorizedError('Mật khẩu không chính xác');
         }
