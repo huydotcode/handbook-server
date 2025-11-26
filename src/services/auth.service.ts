@@ -70,7 +70,7 @@ export class AuthService {
         const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
-            throw new NotFoundError('Email không tồn tại trong hệ thống');
+            throw new NotFoundError('Tài khoản không tồn tại');
         }
 
         const isValid = await user.comparePassword(password);
@@ -115,7 +115,7 @@ export class AuthService {
         const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
-            throw new NotFoundError('Email không tồn tại trong hệ thống');
+            throw new NotFoundError('Tài khoản không tồn tại');
         }
 
         // Generate 6-digit OTP
@@ -203,7 +203,7 @@ export class AuthService {
         const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
-            throw new NotFoundError('Email không tồn tại trong hệ thống');
+            throw new NotFoundError('Tài khoản không tồn tại');
         }
 
         // Hash new password
@@ -241,9 +241,7 @@ export class AuthService {
         });
 
         if (existingUser) {
-            throw new ValidationError(
-                'Email hoặc tên đăng nhập đã tồn tại trong hệ thống'
-            );
+            throw new ValidationError('Email hoặc tên đăng nhập đã tồn tại');
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
