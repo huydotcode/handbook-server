@@ -15,6 +15,7 @@ import postRouter from './post.route';
 import searchRouter from './search.route';
 import uploadRouter from './upload.route';
 import userRouter from './user.route';
+import geminiRouter from './gemini.route';
 
 const apiRouter = Router();
 
@@ -37,5 +38,6 @@ apiRouter.use('/groups', groupRouter);
 apiRouter.use('/uploads', uploadRouter);
 apiRouter.use('/categories', categoryRouter);
 apiRouter.use('/medias', mediaRouter);
+apiRouter.use('/gemini', geminiRouter);
 
 export default apiRouter;
