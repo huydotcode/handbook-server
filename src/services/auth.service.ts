@@ -11,6 +11,7 @@ import { EMailType, sendOtpEmail } from '../common/utils/mail';
 import redis from '../common/utils/redis';
 import Profile from '../models/profile.model';
 import User from '../models/user.model';
+import { UserRepository } from '../repositories';
 
 export interface LoginResult {
     token: string;
@@ -48,6 +49,11 @@ export interface RegisterResult {
 }
 
 export class AuthService {
+    private userRepository: UserRepository;
+
+    constructor() {
+        this.userRepository = new UserRepository();
+    }
     /**
      * Login user with email and password
      * @param email - User email
@@ -61,7 +67,7 @@ export class AuthService {
             throw new ValidationError('Email và mật khẩu là bắt buộc');
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
             throw new NotFoundError('Email không tồn tại trong hệ thống');
@@ -106,7 +112,7 @@ export class AuthService {
             throw new ValidationError('Vui lòng cung cấp email');
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
             throw new NotFoundError('Email không tồn tại trong hệ thống');
@@ -194,7 +200,7 @@ export class AuthService {
             throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
             throw new NotFoundError('Email không tồn tại trong hệ thống');
@@ -230,7 +236,7 @@ export class AuthService {
         const normalizedEmail = email.toLowerCase();
         const normalizedUsername = username.toLowerCase();
 
-        const existingUser = await User.findOne({
+        const existingUser = await this.userRepository.findOne({
             $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
         });
 
@@ -242,7 +248,7 @@ export class AuthService {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({
+        const user = await this.userRepository.create({
             email: normalizedEmail,
             username: normalizedUsername,
             name,

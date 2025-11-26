@@ -7,6 +7,10 @@ export class UserRepository extends BaseRepository<IUserModel> {
         super(User);
     }
 
+    async findByEmail(email: string) {
+        return await this.model.findOne({ email: email.toLowerCase() }).lean();
+    }
+
     /**
      * Retrieve users with pagination metadata.
      * @param page Current page (1-based index)
