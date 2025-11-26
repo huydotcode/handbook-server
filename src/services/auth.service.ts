@@ -9,6 +9,7 @@ import {
 import { jwt } from '../common/utils';
 import { EMailType, sendOtpEmail } from '../common/utils/mail';
 import redis from '../common/utils/redis';
+import Profile from '../models/profile.model';
 import User from '../models/user.model';
 
 export interface LoginResult {
@@ -25,6 +26,25 @@ export interface LoginResult {
 
 export interface SendOTPResult {
     message: string;
+}
+
+export interface RegisterDto {
+    email: string;
+    username: string;
+    name: string;
+    password: string;
+    avatar?: string;
+}
+
+export interface RegisterResult {
+    message: string;
+    user: {
+        id: string;
+        email: string;
+        name: string;
+        username: string;
+        avatar: string;
+    };
 }
 
 export class AuthService {
@@ -187,6 +207,68 @@ export class AuthService {
 
         return {
             message: 'Mật khẩu đã được cập nhật thành công',
+        };
+    }
+
+    /**
+     * Register a new user
+     * @param payload - User registration data
+     */
+    async register(payload: RegisterDto): Promise<RegisterResult> {
+        const { email, username, name, password, avatar } = payload;
+
+        if (!email || !username || !name || !password) {
+            throw new ValidationError(
+                'Email, tên đăng nhập, họ tên và mật khẩu là bắt buộc'
+            );
+        }
+
+        if (password.length < 6) {
+            throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
+        }
+
+        const normalizedEmail = email.toLowerCase();
+        const normalizedUsername = username.toLowerCase();
+
+        const existingUser = await User.findOne({
+            $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
+        });
+
+        if (existingUser) {
+            throw new ValidationError(
+                'Email hoặc tên đăng nhập đã tồn tại trong hệ thống'
+            );
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({
+            email: normalizedEmail,
+            username: normalizedUsername,
+            name,
+            password: hashedPassword,
+            avatar: avatar || '/assets/img/user-profile.jpg',
+        });
+
+        await Profile.create({
+            user: user._id,
+            coverPhoto: '/assets/img/cover-page.jpg',
+            bio: '',
+            work: '',
+            education: '',
+            location: '',
+            dateOfBirth: new Date(),
+        });
+
+        return {
+            message: 'Đăng ký thành công',
+            user: {
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+                username: user.username,
+                avatar: user.avatar,
+            },
         };
     }
 }

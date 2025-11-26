@@ -13,6 +13,12 @@ const authRoutes: IApiRoute[] = [
         controller: authController.login,
     },
     {
+        path: '/register',
+        method: EApiMethod.POST,
+        controller: authController.register,
+        isRateLimited: true,
+    },
+    {
         path: '/send-otp',
         method: EApiMethod.POST,
         controller: authController.sendOTP,

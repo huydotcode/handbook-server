@@ -29,6 +29,24 @@ export class AuthController {
     };
 
     /**
+     * Register new user
+     * POST /api/v1/auth/register
+     */
+    public register = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const result = await authService.register(req.body);
+
+            ResponseUtil.success(res, result.user, result.message);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
      * Send OTP to user email
      * POST /api/v1/auth/send-otp
      */
