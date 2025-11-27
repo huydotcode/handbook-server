@@ -24,11 +24,8 @@ export class MediaService extends BaseService<IMediaModel> {
      * @returns Created media
      */
     async createMedia(data: any, userId: string) {
-        // Validate required fields
-        this.validateRequiredFields(data, ['publicId', 'url', 'creator']);
-
-        // Set creator from userId
         data.creator = userId;
+        this.validateRequiredFields(data, ['publicId', 'url', 'creator']);
 
         return await this.create(data, userId);
     }
