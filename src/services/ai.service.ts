@@ -4,24 +4,24 @@ import {
     ValidationError,
 } from '../common/errors/app.error';
 
-interface GeminiHistoryPart {
+interface AIHistoryPart {
     text: string;
 }
 
-interface GeminiHistoryItem {
+interface AIHistoryItem {
     role: string;
-    parts: GeminiHistoryPart[];
+    parts: AIHistoryPart[];
 }
 
-export class GeminiService {
+export class AIService {
     private genAI: GoogleGenerativeAI;
 
     private modelName: string;
 
-    private history: GeminiHistoryItem[];
+    private history: AIHistoryItem[];
 
     constructor() {
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = process.env.AI_API_KEY;
         if (!apiKey) {
             throw new ServiceUnavailableError(
                 'GOOGLE_API_KEY is not configured'
@@ -29,7 +29,7 @@ export class GeminiService {
         }
 
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+        this.modelName = process.env.AI_MODEL || 'gemini-2.0-flash-lite';
         this.history = [
             {
                 role: 'user',
@@ -76,7 +76,7 @@ export class GeminiService {
             };
         } catch (error) {
             throw new ServiceUnavailableError(
-                'Failed to generate response from Gemini',
+                'Failed to generate response from Handbook AI',
                 error instanceof Error ? error.message : error
             );
         }

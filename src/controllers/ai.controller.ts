@@ -1,12 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import { GeminiService } from '../services/gemini.service';
+import { AIService } from '../services/ai.service';
 
-export class GeminiController {
-    private geminiService: GeminiService;
+export class AIController {
+    private aiService: AIService;
 
     constructor() {
-        this.geminiService = new GeminiService();
+        this.aiService = new AIService();
     }
 
     public chat = async (
@@ -16,12 +16,12 @@ export class GeminiController {
     ): Promise<void> => {
         try {
             const { message } = req.body as { message?: string };
-            const result = await this.geminiService.sendMessage(message || '');
+            const result = await this.aiService.sendMessage(message || '');
 
             ResponseUtil.success(
                 res,
                 result,
-                'Gemini response generated successfully'
+                'Handbook AI response generated successfully'
             );
         } catch (error) {
             next(error);
