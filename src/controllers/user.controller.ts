@@ -174,8 +174,6 @@ export class UserController {
             }
 
             const { bio } = req.body;
-            validateRequiredBodyField(req.body, 'bio');
-
             const profile = await this.profileService.updateBio(userId, bio);
 
             ResponseUtil.success(res, profile, 'Bio updated successfully');
