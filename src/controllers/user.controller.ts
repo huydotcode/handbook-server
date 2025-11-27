@@ -176,11 +176,7 @@ export class UserController {
             const { bio } = req.body;
             validateRequiredBodyField(req.body, 'bio');
 
-            const profile = await this.profileService.updateBio(
-                userId,
-                bio,
-                currentUserId
-            );
+            const profile = await this.profileService.updateBio(userId, bio);
 
             ResponseUtil.success(res, profile, 'Bio updated successfully');
         } catch (error) {
@@ -231,30 +227,28 @@ export class UserController {
         try {
             const userId = req.params.id;
             validateRequiredParam(userId, 'User ID');
+
             const currentUserId = getAuthenticatedUserId(req);
 
-            // Verify user is updating their own profile
-            if (userId !== currentUserId) {
+            const { work, education, location, dateOfBirth } = req.body;
+
+            const profile = await this.profileService.getProfileByUserId(
+                userId
+            );
+
+            if (profile.user.toString() !== currentUserId) {
                 throw new AppError(
                     'You are not authorized to update this profile',
                     HTTP_STATUS.FORBIDDEN
                 );
             }
 
-            const { work, education, location, dateOfBirth } = req.body;
-
-            const profile = await this.profileService.updateProfileByUserId(
-                userId,
-                {
-                    work,
-                    education,
-                    location,
-                    dateOfBirth: dateOfBirth
-                        ? new Date(dateOfBirth)
-                        : undefined,
-                },
-                currentUserId
-            );
+            await this.profileService.updateProfileByUserId(userId, {
+                work,
+                education,
+                location,
+                dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+            });
 
             ResponseUtil.success(res, profile, 'Profile updated successfully');
         } catch (error) {
@@ -324,10 +318,11 @@ export class UserController {
             const { coverPhoto } = req.body;
             validateRequiredBodyField(req.body, 'coverPhoto');
 
-            const profile = await this.profileService.updateCoverPhoto(
+            const profile = await this.profileService.updateProfileByUserId(
                 userId,
-                coverPhoto,
-                currentUserId
+                {
+                    coverPhoto,
+                }
             );
 
             ResponseUtil.success(

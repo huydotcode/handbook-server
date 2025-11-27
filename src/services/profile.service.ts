@@ -51,11 +51,7 @@ export class ProfileService extends BaseService<IProfileModel> {
      * @param currentUserId - Current user ID
      * @returns Updated profile
      */
-    async updateProfileByUserId(
-        userId: string,
-        data: any,
-        currentUserId: string
-    ) {
+    async updateProfileByUserId(userId: string, data: Partial<IProfileModel>) {
         this.validateId(userId);
 
         // Verify user exists
@@ -74,7 +70,7 @@ export class ProfileService extends BaseService<IProfileModel> {
                     user: userId as any,
                     ...data,
                 },
-                currentUserId
+                userId
             );
         } else {
             // Update existing profile
@@ -171,34 +167,9 @@ export class ProfileService extends BaseService<IProfileModel> {
      * @param currentUserId - Current user ID
      * @returns Updated profile
      */
-    async updateBio(
-        userId: string,
-        bio: string,
-        currentUserId: string
-    ): Promise<IProfileModel> {
+    async updateBio(userId: string, bio: string): Promise<IProfileModel> {
         this.validateId(userId, 'User ID');
 
-        return await this.updateProfileByUserId(userId, { bio }, currentUserId);
-    }
-
-    /**
-     * Update cover photo
-     * @param userId - User ID
-     * @param coverPhoto - Cover photo URL
-     * @param currentUserId - Current user ID
-     * @returns Updated profile
-     */
-    async updateCoverPhoto(
-        userId: string,
-        coverPhoto: string,
-        currentUserId: string
-    ): Promise<IProfileModel> {
-        this.validateId(userId, 'User ID');
-
-        return await this.updateProfileByUserId(
-            userId,
-            { coverPhoto },
-            currentUserId
-        );
+        return await this.updateProfileByUserId(userId, { bio });
     }
 }
