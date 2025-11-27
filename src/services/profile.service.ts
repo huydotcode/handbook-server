@@ -1,9 +1,8 @@
-import { HTTP_STATUS } from '../common/constants/status-code';
-import { AppError, NotFoundError } from '../common/errors/app.error';
+import { NotFoundError } from '../common/errors/app.error';
 import { IProfileModel } from '../models/profile.model';
 import { ProfileRepository } from '../repositories/profile.repository';
-import { UserService } from './user.service';
 import { BaseService } from './base.service';
+import { UserService } from './user.service';
 
 export class ProfileService extends BaseService<IProfileModel> {
     private profileRepository: ProfileRepository;
@@ -136,6 +135,8 @@ export class ProfileService extends BaseService<IProfileModel> {
         const profile = await this.getOrCreateProfileByUserId(userId);
 
         return {
+            _id: profile._id,
+            bio: profile.bio,
             user: {
                 _id: user._id,
                 email: user.email,
@@ -153,17 +154,13 @@ export class ProfileService extends BaseService<IProfileModel> {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
-            profile: {
-                _id: profile._id,
-                bio: profile.bio,
-                coverPhoto: profile.coverPhoto,
-                work: profile.work,
-                education: profile.education,
-                location: profile.location,
-                dateOfBirth: profile.dateOfBirth,
-                createdAt: profile.createdAt,
-                updatedAt: profile.updatedAt,
-            },
+            coverPhoto: profile.coverPhoto,
+            work: profile.work,
+            education: profile.education,
+            location: profile.location,
+            dateOfBirth: profile.dateOfBirth,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
         };
     }
 
