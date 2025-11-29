@@ -8,6 +8,7 @@ import {
 import { NotificationRepository } from '../repositories/notification.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { UserService } from './user.service';
+import { ConversationService } from './conversation.service';
 import { BaseService } from './base.service';
 import { PaginationResult } from '../common/types/base';
 
@@ -17,12 +18,14 @@ import { PaginationResult } from '../common/types/base';
 export class NotificationService extends BaseService<INotificationModel> {
     private notificationRepository: NotificationRepository;
     private userService: UserService;
+    private conversationService: ConversationService;
 
     constructor() {
         const repository = new NotificationRepository();
         super(repository);
         this.notificationRepository = repository;
         this.userService = new UserService();
+        this.conversationService = new ConversationService();
     }
 
     /**
@@ -331,9 +334,18 @@ export class NotificationService extends BaseService<INotificationModel> {
             userId
         );
 
+        // Create private conversation between the two users
+        // getPrivateConversation will create if it doesn't exist, or return existing one
+        const conversationResult =
+            await this.conversationService.getPrivateConversation(
+                senderId,
+                receiverId
+            );
+
         return {
             success: true,
             notification: await this.getById(notificationId),
+            conversation: conversationResult.conversation,
         };
     }
 
