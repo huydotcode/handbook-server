@@ -100,8 +100,42 @@ const UserSchema = new Schema<IUserModel>(
             type: String,
             default: '',
         },
-        friends: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-        groups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+        friends: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'User',
+                validate: {
+                    validator: function (v: Types.ObjectId[]) {
+                        // Check if there are duplicate friends
+                        return (
+                            v.length ===
+                            new Set(
+                                v.map((id: Types.ObjectId) => id.toString())
+                            ).size
+                        );
+                    },
+                    message: 'Friends array contains duplicate friends',
+                },
+            },
+        ],
+        groups: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: 'Group',
+                validate: {
+                    validator: function (v: Types.ObjectId[]) {
+                        // Check if there are duplicate groups
+                        return (
+                            v.length ===
+                            new Set(
+                                v.map((id: Types.ObjectId) => id.toString())
+                            ).size
+                        );
+                    },
+                    message: 'Groups array contains duplicate groups',
+                },
+            },
+        ],
         followersCount: {
             type: Number,
             default: 0,
