@@ -37,6 +37,13 @@ const notificationRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/follow',
+        method: EApiMethod.POST,
+        controller: notificationController.createFollowNotification,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/by-users',
         method: EApiMethod.DELETE,
         controller: notificationController.deleteNotificationByUsers,

@@ -114,6 +114,36 @@ export class NotificationController {
     };
 
     /**
+     * POST /api/v1/notifications/follow
+     * Create follow user notification.
+     */
+    public createFollowNotification = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const { receiver } = req.body;
+            validateRequiredBodyField(req.body, 'receiver');
+
+            const notification =
+                await this.notificationService.createFollowUserNotification(
+                    userId,
+                    receiver
+                );
+
+            ResponseUtil.created(
+                res,
+                notification,
+                'Follow notification created successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
      * POST /api/v1/notifications/:id/accept
      * Accept friend request.
      */

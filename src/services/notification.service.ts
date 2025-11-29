@@ -261,6 +261,51 @@ export class NotificationService extends BaseService<INotificationModel> {
     }
 
     /**
+     * Create follow user notification
+     * @param senderId - Sender ID (user who follows)
+     * @param receiverId - Receiver ID (user being followed)
+     * @returns Created notification
+     */
+    async createFollowUserNotification(senderId: string, receiverId: string) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+
+        // Check if user is trying to follow themselves
+        if (senderId === receiverId) {
+            throw new AppError(
+                'Cannot create follow notification for yourself',
+                HTTP_STATUS.BAD_REQUEST
+            );
+        }
+
+        // Check if notification already exists
+        const existingNotification = await this.notificationRepository.findOne({
+            sender: senderId,
+            receiver: receiverId,
+            type: ENotificationType.FOLLOW_USER,
+            isDeleted: false,
+        });
+
+        if (existingNotification) {
+            // Return existing notification instead of throwing error
+            // User might follow/unfollow multiple times
+            return existingNotification;
+        }
+
+        // Create follow notification
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.FOLLOW_USER,
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId
+        );
+    }
+
+    /**
      * Accept friend request
      * @param notificationId - Notification ID
      * @param userId - User ID accepting the request

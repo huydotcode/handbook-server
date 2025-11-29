@@ -5,6 +5,7 @@ export enum ENotificationType {
     ACCEPT_FRIEND_REQUEST = 'accept-friend-request',
     REJECT_FRIEND_REQUEST = 'reject-friend-request',
     MESSAGE = 'message',
+    FOLLOW_USER = 'follow-user',
 }
 
 export interface INotificationModel extends Document {
