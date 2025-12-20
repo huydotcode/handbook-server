@@ -528,4 +528,28 @@ export class PostController {
             next(error);
         }
     };
+
+    /**
+     * DELETE /api/posts/:id
+     * Delete a post by ID.
+     */
+    public deletePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+            await this.postService.deletePost(postId, userId);
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Post deleted successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
 }

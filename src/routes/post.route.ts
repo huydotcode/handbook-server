@@ -118,6 +118,11 @@ const postRoutes: IApiRoute[] = [
         controller: postController.getPostById,
         isRateLimited: true,
     },
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: postController.deletePost,
+    },
 ];
 
 addRoutes(postRouter, postRoutes);

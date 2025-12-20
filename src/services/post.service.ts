@@ -510,4 +510,14 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(postId, 'Post ID');
         await this.postRepository.incrementCommentsCount(postId, incrementBy);
     }
+
+    /**
+     * Delete post by ID.
+     * @param postId - Post ID
+     * @param userId - User ID performing the action
+     */
+    async deletePost(postId: string, userId: string): Promise<void> {
+        this.validateId(postId, 'Post ID');
+        await this.delete(postId, userId);
+    }
 }
