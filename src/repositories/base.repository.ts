@@ -24,6 +24,36 @@ export abstract class BaseRepository<T extends Document> {
     }
 
     /**
+     * Find a document by ID with populated fields
+     * @param id - Document ID
+     * @param populateOptions - Populate options (string, object, or array)
+     * @returns Document with populated fields or null if not found
+     */
+    async findByIdAndPopulate(
+        id: string,
+        populateOptions: any
+    ): Promise<T | null> {
+        try {
+            const query = this.model.findById(id);
+
+            // Handle different populate formats
+            if (Array.isArray(populateOptions)) {
+                populateOptions.forEach((option: any) => {
+                    query.populate(option);
+                });
+            } else {
+                query.populate(populateOptions);
+            }
+
+            const document = await query.lean();
+            return document as T | null;
+        } catch (error) {
+            console.error('Database error in findByIdAndPopulate:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Find one document by filter
      * @param filter - MongoDB filter query
      * @returns Document or null if not found
