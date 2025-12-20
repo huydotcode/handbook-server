@@ -164,4 +164,19 @@ export class PostRepository extends BaseRepository<IPostModel> {
             },
         };
     }
+
+    /**
+     * Increment the comments count of a post.
+     * @param postId - Post ID
+     * @param incrementBy - Number to increment by (default is 1)
+     */
+    async incrementCommentsCount(
+        postId: string,
+        incrementBy: number = 1
+    ): Promise<void> {
+        await this.model.updateOne(
+            { _id: new Types.ObjectId(postId) },
+            { $inc: { commentsCount: incrementBy } }
+        );
+    }
 }

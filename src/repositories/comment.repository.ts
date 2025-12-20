@@ -25,7 +25,6 @@ export class CommentRepository extends BaseRepository<ICommentModel> {
                 .find({
                     post: postId,
                     replyComment: null,
-                    isDeleted: false,
                 })
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -36,7 +35,6 @@ export class CommentRepository extends BaseRepository<ICommentModel> {
             this.model.countDocuments({
                 post: postId,
                 replyComment: null,
-                isDeleted: false,
             }),
         ]);
 
@@ -71,7 +69,6 @@ export class CommentRepository extends BaseRepository<ICommentModel> {
             this.model
                 .find({
                     replyComment: commentId,
-                    isDeleted: false,
                 })
                 .sort({ createdAt: -1 })
                 .skip(skip)
@@ -81,7 +78,6 @@ export class CommentRepository extends BaseRepository<ICommentModel> {
                 .lean(),
             this.model.countDocuments({
                 replyComment: commentId,
-                isDeleted: false,
             }),
         ]);
 

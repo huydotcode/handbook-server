@@ -5,9 +5,9 @@ import PostInteraction, {
     EPostInteractionType,
 } from '../models/post-interaction.model';
 import {
+    EPostStatus,
     IPostModel,
     IPostWithInteraction,
-    EPostStatus,
 } from '../models/post.model';
 import { PostRepository } from '../repositories/post.repository';
 import { BaseService } from './base.service';
@@ -496,5 +496,18 @@ export class PostService extends BaseService<IPostModel> {
             page,
             pageSize
         );
+    }
+
+    /**
+     * Increment comments count of a post.
+     * @param postId - Post ID
+     * @param incrementBy - Number to increment by (default is 1)
+     */
+    async incrementCommentsCount(
+        postId: string,
+        incrementBy: number = 1
+    ): Promise<void> {
+        this.validateId(postId, 'Post ID');
+        await this.postRepository.incrementCommentsCount(postId, incrementBy);
     }
 }

@@ -1,12 +1,19 @@
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
-import { ICommentModel, ICommentInput } from '../models/comment.model';
+import { PaginationParams, PaginationResult } from '../common/types/base';
+import { POPULATE_USER } from '../common/utils/populate';
+import { ICommentInput, ICommentModel } from '../models/comment.model';
+import { EPostInteractionType } from '../models/post-interaction.model';
 import { CommentRepository } from '../repositories/comment.repository';
 import { BaseService } from './base.service';
-import { PaginationParams, PaginationResult } from '../common/types/base';
+import { PostInteractionService } from './post-interaction.service';
+import { PostService } from './post.service';
 
 export class CommentService extends BaseService<ICommentModel> {
     private commentRepository: CommentRepository;
+    private postService: PostService = new PostService();
+    private postInteractionService: PostInteractionService =
+        new PostInteractionService();
 
     constructor() {
         const repository = new CommentRepository();
@@ -18,7 +25,7 @@ export class CommentService extends BaseService<ICommentModel> {
      * Create a new comment
      * @param data - Comment data
      * @param userId - User ID performing the action
-     * @returns Created comment
+     * @returns Created comment with populated author
      */
     async createComment(
         data: Partial<ICommentInput>,
@@ -31,7 +38,32 @@ export class CommentService extends BaseService<ICommentModel> {
             // Set author from userId
             data.author = userId as any;
 
-            const comment = await this.create(data, userId);
+            const postId = data.post?.toString();
+
+            const post = await this.postService.getByIdOrThrow(postId!);
+
+            if (!post || !postId) {
+                throw new NotFoundError(`Post not found with id: ${postId}`);
+            }
+
+            // Create comment and populate author
+            const comment = await this.create(data, userId, {
+                path: 'author',
+                select: POPULATE_USER,
+            });
+
+            // Update post's comment count
+            await this.postService.incrementCommentsCount(postId);
+
+            // Create a post interaction for the comment
+            await this.postInteractionService.createPostInteraction(
+                {
+                    user: userId,
+                    post: postId,
+                    type: EPostInteractionType.COMMENT,
+                },
+                postId!
+            );
 
             return comment;
         } catch (error) {
