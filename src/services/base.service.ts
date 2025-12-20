@@ -53,12 +53,27 @@ export abstract class BaseService<T extends Document> {
      * Create new entity
      * @param data - Entity data
      * @param userId - User ID performing the action
-     * @returns Created entity
+     * @param populateOptions - Optional populate options for related fields (string, object, or array)
+     * @returns Created entity (with populated fields if populateOptions provided)
      */
-    async create(data: Partial<T>, userId: string): Promise<T> {
+    async create(
+        data: Partial<T>,
+        userId: string,
+        populateOptions?: any
+    ): Promise<T> {
         try {
             const entity = await this.repository.create(data);
             this.logActivity(userId, 'created', entity._id as string);
+
+            // If populateOptions provided, populate the entity
+            if (populateOptions) {
+                const populated = await this.repository.findByIdAndPopulate(
+                    entity._id as string,
+                    populateOptions
+                );
+                return populated || entity;
+            }
+
             return entity;
         } catch (error) {
             this.handleDuplicateKeyError(error, 'field');
