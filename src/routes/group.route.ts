@@ -29,6 +29,27 @@ const groupRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/:id/members',
+        method: EApiMethod.POST,
+        controller: groupController.addMember,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/members/:userId',
+        method: EApiMethod.DELETE,
+        controller: groupController.removeMember,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/members/:userId/role',
+        method: EApiMethod.PUT,
+        controller: groupController.updateMemberRole,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/:id/join',
         method: EApiMethod.POST,
         controller: groupController.joinGroup,

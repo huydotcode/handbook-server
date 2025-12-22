@@ -1,13 +1,10 @@
 import { Schema, model, models, Types, Document } from 'mongoose';
 
+// Note: EGroupUserRole is now exported from groupMember.model.ts
+// Kept here for backward compatibility
 export enum EGroupUserRole {
     MEMBER = 'MEMBER',
     ADMIN = 'ADMIN',
-}
-
-export interface IGroupMember {
-    user: Types.ObjectId;
-    role: EGroupUserRole;
 }
 
 export interface IGroupModel extends Document {
@@ -15,7 +12,6 @@ export interface IGroupModel extends Document {
     name: string;
     description: string;
     avatar: Types.ObjectId;
-    members: IGroupMember[];
     creator: Types.ObjectId;
     coverPhoto: string;
     type: string;
@@ -29,7 +25,6 @@ export interface IGroupInput {
     name: string;
     description: string;
     avatar: Types.ObjectId;
-    members: IGroupMember[];
     creator: Types.ObjectId;
     coverPhoto: string;
     type: string;
@@ -62,20 +57,6 @@ const GroupSchema = new Schema<IGroupModel>(
             required: true,
             ref: 'User',
         },
-        members: [
-            {
-                user: {
-                    type: Schema.Types.ObjectId,
-                    required: true,
-                    ref: 'User',
-                },
-                role: {
-                    type: Schema.Types.String,
-                    enum: Object.values(EGroupUserRole),
-                    default: EGroupUserRole.MEMBER,
-                },
-            },
-        ],
         type: {
             type: String,
             default: 'public',
@@ -102,7 +83,6 @@ const GroupSchema = new Schema<IGroupModel>(
 GroupSchema.index({ name: 'text' });
 GroupSchema.index({ name: 1 });
 GroupSchema.index({ creator: 1 });
-GroupSchema.index({ 'members.user': 1 });
 
 const Group = models.Group || model<IGroupModel>('Group', GroupSchema);
 export default Group;

@@ -3,7 +3,6 @@ export const POPULATE_GROUP = {
     path: 'group',
     populate: [
         { path: 'avatar' },
-        { path: 'members.user', select: POPULATE_USER },
         { path: 'creator', select: POPULATE_USER },
     ],
 };

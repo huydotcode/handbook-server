@@ -342,4 +342,90 @@ export class GroupController {
             next(error);
         }
     };
+
+    /**
+     * POST /api/v1/groups/:id/members
+     * Add a member to the group (admin or creator only).
+     */
+    public addMember = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.id;
+            validateRequiredParam(groupId, 'Group ID');
+            const userId = getAuthenticatedUserId(req);
+            const { user, role } = req.body as { user: string; role?: string };
+            validateRequiredBodyField(req.body, 'user');
+
+            // Verify permissions inside service (admin/creator)
+            const group = await this.groupService.addMember(groupId, user);
+
+            ResponseUtil.success(res, group, 'Member added successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/groups/:id/members/:userId
+     * Remove a member from the group (admin or creator only).
+     */
+    public removeMember = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.id;
+            const targetUserId = req.params.userId;
+            validateRequiredParam(groupId, 'Group ID');
+            validateRequiredParam(targetUserId, 'User ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const group = await this.groupService.removeMember(
+                groupId,
+                targetUserId
+            );
+
+            ResponseUtil.success(res, group, 'Member removed successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PUT /api/v1/groups/:id/members/:userId/role
+     * Update a member's role (admin or creator only).
+     */
+    public updateMemberRole = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.id;
+            const targetUserId = req.params.userId;
+            const { role } = req.body as { role: 'ADMIN' | 'MEMBER' };
+            validateRequiredParam(groupId, 'Group ID');
+            validateRequiredParam(targetUserId, 'User ID');
+            validateRequiredBodyField(req.body, 'role');
+            const userId = getAuthenticatedUserId(req);
+
+            const updated = await this.groupService.updateMemberRole(
+                groupId,
+                targetUserId,
+                role as any
+            );
+
+            ResponseUtil.success(
+                res,
+                updated,
+                'Member role updated successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
 }

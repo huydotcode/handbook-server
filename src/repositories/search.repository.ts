@@ -61,7 +61,7 @@ export class SearchRepository {
                 .skip(skip)
                 .limit(pageSize)
                 .populate('avatar')
-                .populate({ path: 'members.user', select: POPULATE_USER })
+                .populate('creator', POPULATE_USER)
                 .lean<IGroupModel[]>(),
             Group.countDocuments(filter),
         ]);

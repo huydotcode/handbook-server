@@ -2,26 +2,28 @@ import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
-import {
-    EGroupUserRole,
-    IGroupMember,
-    IGroupModel,
-} from '../models/group.model';
+import { EGroupUserRole, IGroupModel } from '../models/group.model';
 import { GroupRepository } from '../repositories/group.repository';
+import { GroupMemberRepository } from '../repositories/groupMember.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
+import { GroupMemberService } from './groupMember.service';
 
 /**
  * Service handling business logic for groups.
  */
 export class GroupService extends BaseService<IGroupModel> {
     private groupRepository: GroupRepository;
+    private groupMemberRepository: GroupMemberRepository;
+    private groupMemberService: GroupMemberService;
     private userRepository: UserRepository;
 
     constructor() {
         const repository = new GroupRepository();
         super(repository);
         this.groupRepository = repository;
+        this.groupMemberRepository = new GroupMemberRepository();
+        this.groupMemberService = new GroupMemberService();
         this.userRepository = new UserRepository();
     }
 
@@ -44,56 +46,6 @@ export class GroupService extends BaseService<IGroupModel> {
         // Set creator
         data.creator = new Types.ObjectId(userId);
 
-        // Convert members array if provided
-        if (data.members && Array.isArray(data.members)) {
-            data.members = data.members.map((member: any) => ({
-                user: new Types.ObjectId(
-                    typeof member === 'string' ? member : member.user || member
-                ),
-                role:
-                    typeof member === 'object' && member.role
-                        ? member.role
-                        : EGroupUserRole.MEMBER,
-            }));
-        }
-
-        // Add creator as admin member if not already in members
-        const creatorInMembers = data.members?.some(
-            (m: IGroupMember) =>
-                (typeof m.user === 'string' ? m.user : m.user.toString()) ===
-                userId
-        );
-
-        if (!creatorInMembers) {
-            if (!data.members) {
-                data.members = [];
-            }
-            data.members.push({
-                user: new Types.ObjectId(userId),
-                role: EGroupUserRole.ADMIN,
-            });
-        } else {
-            // Ensure creator is ADMIN
-            data.members = data.members.map((m: IGroupMember) => {
-                const memberUserId =
-                    typeof m.user === 'string' ? m.user : m.user.toString();
-                if (memberUserId === userId) {
-                    return {
-                        ...m,
-                        user: new Types.ObjectId(userId),
-                        role: EGroupUserRole.ADMIN,
-                    };
-                }
-                return {
-                    ...m,
-                    user:
-                        typeof m.user === 'string'
-                            ? new Types.ObjectId(m.user)
-                            : m.user,
-                };
-            });
-        }
-
         // Set default values
         if (!data.avatar) {
             throw new AppError('Avatar is required', HTTP_STATUS.BAD_REQUEST);
@@ -112,10 +64,61 @@ export class GroupService extends BaseService<IGroupModel> {
 
         const group = await this.create(data, userId);
 
+        // Add creator as ADMIN member
+        await this.groupMemberService.addMember(
+            group._id.toString(),
+            userId,
+            EGroupUserRole.ADMIN
+        );
+
         // Update user's groups list with actual group ID
         await this.userRepository.update(userId, {
             $addToSet: { groups: new Types.ObjectId(group._id) },
         });
+
+        // Optionally add initial members if provided
+        if (
+            data.members &&
+            Array.isArray(data.members) &&
+            data.members.length > 0
+        ) {
+            const entries = data.members
+                .map((m: any) => {
+                    if (typeof m === 'string')
+                        return { userId: m, role: EGroupUserRole.MEMBER };
+                    if (typeof m === 'object') {
+                        const userIdField = m.user || m.userId || m._id;
+                        return {
+                            userId: String(userIdField),
+                            role: m.role || EGroupUserRole.MEMBER,
+                        };
+                    }
+                    return null;
+                })
+                .filter(Boolean) as { userId: string; role: EGroupUserRole }[];
+
+            // Avoid adding creator twice
+            const filtered = entries.filter((e) => e.userId !== userId);
+
+            await Promise.allSettled(
+                filtered.map(async (e) => {
+                    try {
+                        await this.groupMemberService.addMember(
+                            group._id.toString(),
+                            e.userId,
+                            e.role
+                        );
+                        await this.userRepository.update(e.userId, {
+                            $addToSet: {
+                                groups: new Types.ObjectId(group._id),
+                            },
+                        });
+                    } catch (_) {
+                        // ignore individual failures
+                    }
+                })
+            );
+        }
 
         return group;
     }
@@ -174,8 +177,13 @@ export class GroupService extends BaseService<IGroupModel> {
             );
         }
 
+        // Collect members before removal
+        const members = await this.groupMemberRepository.findGroupMembers(id);
+        // Remove all members from group
+        await this.groupMemberService.removeGroupMembers(id);
+
         // Remove group from all members' groups list
-        const memberIds = (group.members || []).map((m) =>
+        const memberIds = members.map((m) =>
             typeof m.user === 'string' ? m.user : m.user.toString()
         );
 
@@ -208,44 +216,18 @@ export class GroupService extends BaseService<IGroupModel> {
         // Verify group exists
         const group = await this.getByIdOrThrow(groupId);
 
-        // Check if user is already a member
-        const isMember = (group.members || []).some((m) => {
-            const memberUserId =
-                typeof m.user === 'string' ? m.user : m.user.toString();
-            return memberUserId === userId;
-        });
-
-        if (isMember) {
-            throw new AppError(
-                'User is already a member of this group',
-                HTTP_STATUS.CONFLICT
-            );
-        }
-
-        // Add user to group members
-        const updated = await this.groupRepository.findOneAndUpdate(
-            { _id: groupId },
-            {
-                $addToSet: {
-                    members: {
-                        user: new Types.ObjectId(userId),
-                        role: EGroupUserRole.MEMBER,
-                    },
-                },
-                $set: { lastActivity: new Date() },
-            }
-        );
-
-        if (!updated) {
-            throw new NotFoundError(`Group not found with id: ${groupId}`);
-        }
+        // Add user as member
+        await this.groupMemberService.addMember(groupId, userId);
 
         // Add group to user's groups list
         await this.userRepository.update(userId, {
             $addToSet: { groups: new Types.ObjectId(groupId) },
         });
 
-        return updated;
+        // Update group last activity
+        await this.update(groupId, { lastActivity: new Date() }, userId);
+
+        return group;
     }
 
     /**
@@ -274,12 +256,10 @@ export class GroupService extends BaseService<IGroupModel> {
         }
 
         // Check if user is a member
-        const isMember = (group.members || []).some((m) => {
-            const memberUserId =
-                typeof m.user === 'string' ? m.user : m.user.toString();
-            return memberUserId === userId;
-        });
-
+        const isMember = await this.groupMemberService.isMember(
+            groupId,
+            userId
+        );
         if (!isMember) {
             throw new AppError(
                 'User is not a member of this group',
@@ -288,26 +268,17 @@ export class GroupService extends BaseService<IGroupModel> {
         }
 
         // Remove user from group members
-        const updated = await this.groupRepository.findOneAndUpdate(
-            { _id: groupId },
-            {
-                $pull: {
-                    members: { user: new Types.ObjectId(userId) },
-                },
-                $set: { lastActivity: new Date() },
-            }
-        );
+        await this.groupMemberService.removeMember(groupId, userId);
 
-        if (!updated) {
-            throw new NotFoundError(`Group not found with id: ${groupId}`);
-        }
+        // Update group last activity
+        await this.update(groupId, { lastActivity: new Date() }, userId);
 
         // Remove group from user's groups list
         await this.userRepository.update(userId, {
             $pull: { groups: new Types.ObjectId(groupId) },
         });
 
-        return updated;
+        return group;
     }
 
     /**
@@ -332,12 +303,7 @@ export class GroupService extends BaseService<IGroupModel> {
      */
     async getGroupsByMember(userId: string) {
         this.validateId(userId, 'User ID');
-        return await this.groupRepository.findManyWithSort(
-            {
-                'members.user': new Types.ObjectId(userId),
-            },
-            { lastActivity: -1 }
-        );
+        return await this.groupMemberService.getUserGroups(userId);
     }
 
     /**
@@ -359,7 +325,14 @@ export class GroupService extends BaseService<IGroupModel> {
      */
     async getJoinedGroups(userId: string) {
         this.validateId(userId, 'User ID');
-        return await this.groupRepository.findJoinedGroups(userId);
+        const memberships = await this.groupMemberRepository.findUserGroups(
+            userId
+        );
+        // Map to groups; repository populated 'group'
+        const groups = memberships
+            .map((m) => (m as any).group)
+            .filter(Boolean) as IGroupModel[];
+        return groups;
     }
 
     /**
@@ -390,22 +363,19 @@ export class GroupService extends BaseService<IGroupModel> {
         this.validateId(groupId, 'Group ID');
         this.validateId(userId, 'User ID');
 
-        const group = await this.groupRepository.findOneAndUpdate(
-            { _id: groupId },
-            {
-                $addToSet: {
-                    members: {
-                        user: new Types.ObjectId(userId),
-                        role: EGroupUserRole.MEMBER,
-                    },
-                },
-                $set: { lastActivity: new Date() },
-            }
-        );
+        // Verify group exists
+        const group = await this.getByIdOrThrow(groupId);
 
-        if (!group) {
-            throw new NotFoundError(`Group not found with id: ${groupId}`);
-        }
+        // Add member via GroupMemberService
+        await this.groupMemberService.addMember(groupId, userId);
+
+        // Also add group to user's groups list
+        await this.userRepository.update(userId, {
+            $addToSet: { groups: new Types.ObjectId(groupId) },
+        });
+
+        // Update group last activity
+        await this.update(groupId, { lastActivity: new Date() }, userId);
 
         return group;
     }
@@ -420,19 +390,19 @@ export class GroupService extends BaseService<IGroupModel> {
         this.validateId(groupId, 'Group ID');
         this.validateId(userId, 'User ID');
 
-        const group = await this.groupRepository.findOneAndUpdate(
-            { _id: groupId },
-            {
-                $pull: {
-                    members: { user: new Types.ObjectId(userId) },
-                },
-                $set: { lastActivity: new Date() },
-            }
-        );
+        // Verify group exists
+        const group = await this.getByIdOrThrow(groupId);
 
-        if (!group) {
-            throw new NotFoundError(`Group not found with id: ${groupId}`);
-        }
+        // Remove member via GroupMemberService
+        await this.groupMemberService.removeMember(groupId, userId);
+
+        // Also remove group from user's groups list
+        await this.userRepository.update(userId, {
+            $pull: { groups: new Types.ObjectId(groupId) },
+        });
+
+        // Update group last activity
+        await this.update(groupId, { lastActivity: new Date() }, userId);
 
         return group;
     }
@@ -442,7 +412,7 @@ export class GroupService extends BaseService<IGroupModel> {
      * @param groupId - Group ID
      * @param userId - User ID
      * @param role - New role (MEMBER or ADMIN)
-     * @returns Updated group
+     * @returns Updated member
      */
     async updateMemberRole(
         groupId: string,
@@ -452,24 +422,17 @@ export class GroupService extends BaseService<IGroupModel> {
         this.validateId(groupId, 'Group ID');
         this.validateId(userId, 'User ID');
 
-        const group = await this.groupRepository.findOneAndUpdate(
-            {
-                _id: groupId,
-                'members.user': new Types.ObjectId(userId),
-            },
-            {
-                $set: {
-                    'members.$.role': role,
-                    lastActivity: new Date(),
-                },
-            }
+        // Update member role via GroupMemberService
+        const updated = await this.groupMemberService.updateMemberRole(
+            groupId,
+            userId,
+            role
         );
 
-        if (!group) {
-            throw new NotFoundError(`Group not found with id: ${groupId}`);
-        }
+        // Update group last activity
+        await this.update(groupId, { lastActivity: new Date() }, userId);
 
-        return group;
+        return updated;
     }
 
     /**
@@ -491,13 +454,12 @@ export class GroupService extends BaseService<IGroupModel> {
         }
 
         // Check if user is admin
-        const isAdmin = (group.members || []).some((m) => {
-            const memberUserId =
-                typeof m.user === 'string' ? m.user : m.user.toString();
-            return memberUserId === userId && m.role === EGroupUserRole.ADMIN;
-        });
+        const member = await this.groupMemberService.getMember(
+            group._id.toString(),
+            userId
+        );
 
-        if (!isAdmin) {
+        if (!member || member.role !== EGroupUserRole.ADMIN) {
             throw new AppError(
                 'Only admins or creator can perform this action',
                 HTTP_STATUS.FORBIDDEN
@@ -516,45 +478,15 @@ export class GroupService extends BaseService<IGroupModel> {
         groupId: string,
         page: number,
         pageSize: number
-    ): Promise<PaginationResult<IGroupMember>> {
+    ): Promise<PaginationResult<any>> {
         this.validateId(groupId, 'Group ID');
         this.validatePagination(page, pageSize);
 
-        const group = await this.getByIdOrThrow(groupId);
-        const members = group.members || [];
-
-        // Paginate manually
-        const skip = (page - 1) * pageSize;
-        const paginatedMembers = members.slice(skip, skip + pageSize);
-        const total = members.length;
-        const totalPages = Math.ceil(total / pageSize) || 1;
-
-        // Populate user data for members
-        const populatedMembers = await Promise.all(
-            paginatedMembers.map(async (member) => {
-                const userId =
-                    typeof member.user === 'string'
-                        ? member.user
-                        : member.user.toString();
-                const user = await this.userRepository.findById(userId);
-                return {
-                    ...member,
-                    user: user || member.user,
-                };
-            })
+        return await this.groupMemberService.getGroupMembersPaginated(
+            groupId,
+            page,
+            pageSize
         );
-
-        return {
-            data: populatedMembers as IGroupMember[],
-            pagination: {
-                page,
-                pageSize,
-                total,
-                totalPages,
-                hasNext: page < totalPages,
-                hasPrev: page > 1,
-            },
-        };
     }
 
     /**
@@ -570,26 +502,12 @@ export class GroupService extends BaseService<IGroupModel> {
         const joinedGroupIds = joinedGroups.map((g) => g._id.toString());
 
         // Get groups that user is not a member of
-        const allGroups = await this.groupRepository.findManyWithSort(
-            {
-                _id: {
-                    $nin:
-                        joinedGroupIds.length > 0
-                            ? joinedGroupIds.map((id) => new Types.ObjectId(id))
-                            : [],
-                },
-                type: 'public', // Only public groups
-            },
-            { createdAt: -1 } // Sort by creation date
-        );
-
-        const recommendedGroups = allGroups
-            .sort((a, b) => {
-                const aMembers = (a.members || []).length;
-                const bMembers = (b.members || []).length;
-                return bMembers - aMembers;
-            })
-            .slice(0, 10);
+        const recommendedGroups =
+            await this.groupRepository.findRecommendWithDetails(
+                joinedGroupIds.length > 0
+                    ? joinedGroupIds.map((id) => new Types.ObjectId(id))
+                    : []
+            );
 
         return recommendedGroups;
     }

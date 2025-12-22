@@ -13,6 +13,20 @@ export class GroupRepository extends BaseRepository<IGroupModel> {
     }
 
     /**
+     * Find recommended groups excluding those already joined by the user.
+     */
+    async findRecommendWithDetails(
+        joinedGroupIds: Types.ObjectId[]
+    ): Promise<IGroupModel[]> {
+        return await this.model
+            .find({ _id: { $nin: joinedGroupIds } })
+            .populate('avatar')
+            .populate('creator', POPULATE_USER)
+            .sort({ lastActivity: -1 })
+            .lean();
+    }
+
+    /**
      * Find a group by ID with populated relations.
      */
     async findByIdWithDetails(id: string): Promise<IGroupModel | null> {
@@ -20,22 +34,6 @@ export class GroupRepository extends BaseRepository<IGroupModel> {
             .findById(id)
             .populate('avatar')
             .populate('creator', POPULATE_USER)
-            .populate('members.user', POPULATE_USER)
-            .lean();
-    }
-
-    /**
-     * Find groups the user has joined, sorted by latest activity.
-     */
-    async findJoinedGroups(userId: string): Promise<IGroupModel[]> {
-        return await this.model
-            .find({
-                'members.user': new Types.ObjectId(userId),
-            })
-            .populate('avatar')
-            .populate('creator', POPULATE_USER)
-            .populate('members.user', POPULATE_USER)
-            .sort({ lastActivity: -1 })
             .lean();
     }
 
@@ -53,7 +51,6 @@ export class GroupRepository extends BaseRepository<IGroupModel> {
                 .find({})
                 .populate('avatar')
                 .populate('creator', POPULATE_USER)
-                .populate('members.user', POPULATE_USER)
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(pageSize)
