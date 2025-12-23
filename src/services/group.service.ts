@@ -4,10 +4,10 @@ import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
 import { EGroupUserRole, IGroupModel } from '../models/group.model';
 import { GroupRepository } from '../repositories/group.repository';
-import { GroupMemberRepository } from '../repositories/groupMember.repository';
+import { GroupMemberRepository } from '../repositories/group-member.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
-import { GroupMemberService } from './groupMember.service';
+import { GroupMemberService } from './group-member.service';
 
 /**
  * Service handling business logic for groups.
@@ -43,6 +43,10 @@ export class GroupService extends BaseService<IGroupModel> {
             throw new NotFoundError(`User not found with id: ${userId}`);
         }
 
+        // Extract members before schema validation (members are handled separately)
+        const members = data.members;
+        delete data.members;
+
         // Set creator
         data.creator = new Types.ObjectId(userId);
 
@@ -71,18 +75,9 @@ export class GroupService extends BaseService<IGroupModel> {
             EGroupUserRole.ADMIN
         );
 
-        // Update user's groups list with actual group ID
-        await this.userRepository.update(userId, {
-            $addToSet: { groups: new Types.ObjectId(group._id) },
-        });
-
         // Optionally add initial members if provided
-        if (
-            data.members &&
-            Array.isArray(data.members) &&
-            data.members.length > 0
-        ) {
-            const entries = data.members
+        if (members && Array.isArray(members) && members.length > 0) {
+            const entries = members
                 .map((m: any) => {
                     if (typeof m === 'string')
                         return { userId: m, role: EGroupUserRole.MEMBER };
@@ -108,11 +103,6 @@ export class GroupService extends BaseService<IGroupModel> {
                             e.userId,
                             e.role
                         );
-                        await this.userRepository.update(e.userId, {
-                            $addToSet: {
-                                groups: new Types.ObjectId(group._id),
-                            },
-                        });
                     } catch (_) {
                         // ignore individual failures
                     }
@@ -182,18 +172,6 @@ export class GroupService extends BaseService<IGroupModel> {
         // Remove all members from group
         await this.groupMemberService.removeGroupMembers(id);
 
-        // Remove group from all members' groups list
-        const memberIds = members.map((m) =>
-            typeof m.user === 'string' ? m.user : m.user.toString()
-        );
-
-        if (memberIds.length > 0) {
-            await this.userRepository.updateMany(
-                { _id: { $in: memberIds.map((id) => new Types.ObjectId(id)) } },
-                { $pull: { groups: new Types.ObjectId(id) } }
-            );
-        }
-
         // Delete group
         const deleted = await this.delete(id, userId);
         if (!deleted) {
@@ -218,11 +196,6 @@ export class GroupService extends BaseService<IGroupModel> {
 
         // Add user as member
         await this.groupMemberService.addMember(groupId, userId);
-
-        // Add group to user's groups list
-        await this.userRepository.update(userId, {
-            $addToSet: { groups: new Types.ObjectId(groupId) },
-        });
 
         // Update group last activity
         await this.update(groupId, { lastActivity: new Date() }, userId);
@@ -368,11 +341,6 @@ export class GroupService extends BaseService<IGroupModel> {
 
         // Add member via GroupMemberService
         await this.groupMemberService.addMember(groupId, userId);
-
-        // Also add group to user's groups list
-        await this.userRepository.update(userId, {
-            $addToSet: { groups: new Types.ObjectId(groupId) },
-        });
 
         // Update group last activity
         await this.update(groupId, { lastActivity: new Date() }, userId);
