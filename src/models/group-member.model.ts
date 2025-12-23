@@ -61,5 +61,7 @@ GroupMemberSchema.index({ group: 1 }); // Find all members of a group
 GroupMemberSchema.index({ user: 1 }); // Find all groups of a user
 GroupMemberSchema.index({ group: 1, role: 1 }); // Find admins of a group
 
-const GroupMember = models.GroupMember || model<IGroupMemberModel>('GroupMember', GroupMemberSchema);
+const GroupMember =
+    models.GroupMember ||
+    model<IGroupMemberModel>('GroupMember', GroupMemberSchema);
 export default GroupMember;
