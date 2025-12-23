@@ -20,7 +20,6 @@ export interface IUserModel extends Document {
     familyName: string;
     locale: string;
     friends: Types.ObjectId[];
-    groups: Types.ObjectId[];
     followersCount: number;
     isOnline: boolean;
     isBlocked: boolean;
@@ -115,24 +114,6 @@ const UserSchema = new Schema<IUserModel>(
                         );
                     },
                     message: 'Friends array contains duplicate friends',
-                },
-            },
-        ],
-        groups: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'Group',
-                validate: {
-                    validator: function (v: Types.ObjectId[]) {
-                        // Check if there are duplicate groups
-                        return (
-                            v.length ===
-                            new Set(
-                                v.map((id: Types.ObjectId) => id.toString())
-                            ).size
-                        );
-                    },
-                    message: 'Groups array contains duplicate groups',
                 },
             },
         ],
