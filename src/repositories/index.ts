@@ -6,7 +6,7 @@ export * from './message.repository';
 export * from './comment.repository';
 export * from './conversation.repository';
 export * from './group.repository';
-export * from './groupMember.repository';
+export * from './group-member.repository';
 export * from './follow.repository';
 export * from './item.repository';
 export * from './media.repository';
