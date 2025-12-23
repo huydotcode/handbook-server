@@ -42,6 +42,30 @@ export class GroupController {
     };
 
     /**
+     * GET /api/v1/groups/:id/access
+     * Check if user has access to group.
+     */
+    public checkAccess = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.id;
+            validateRequiredParam(groupId, 'Group ID');
+            const userId = getOptionalUserId(req);
+
+            const result = await this.groupService.checkUserAccess(
+                groupId,
+                userId
+            );
+            ResponseUtil.success(res, result, 'Access check completed');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
      * GET /api/v1/groups/joined
      * Retrieve groups the user has joined.
      */

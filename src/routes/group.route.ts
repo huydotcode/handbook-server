@@ -9,6 +9,12 @@ const groupController = new GroupController();
 const groupRoutes: IApiRoute[] = [
     // Specific routes first
     {
+        path: '/:id/access',
+        method: EApiMethod.GET,
+        controller: groupController.checkAccess,
+        isRateLimited: true,
+    },
+    {
         path: '/:id/avatar',
         method: EApiMethod.PUT,
         controller: groupController.updateAvatar,

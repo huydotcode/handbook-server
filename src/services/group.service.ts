@@ -309,6 +309,39 @@ export class GroupService extends BaseService<IGroupModel> {
     }
 
     /**
+     * Check if user has access to a group
+     * @param groupId - Group ID
+     * @param userId - User ID (optional, for authenticated users)
+     * @returns Object with hasAccess boolean
+     */
+    async checkUserAccess(
+        groupId: string,
+        userId?: string
+    ): Promise<{ hasAccess: boolean }> {
+        this.validateId(groupId, 'Group ID');
+
+        const group = await this.groupRepository.findById(groupId);
+
+        if (!group) {
+            return { hasAccess: false };
+        }
+
+        // Public groups are accessible to all
+        if (group.type === 'public') {
+            return { hasAccess: true };
+        }
+
+        // Private groups require membership
+        if (!userId) {
+            return { hasAccess: false };
+        }
+
+        // Check if user is a member
+        const member = await this.groupMemberService.getMember(groupId, userId);
+        return { hasAccess: !!member };
+    }
+
+    /**
      * Search groups by name
      * @param searchTerm - Search term
      * @returns Array of groups
