@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
@@ -12,6 +13,7 @@ import {
 import { PostRepository } from '../repositories/post.repository';
 import { BaseService } from './base.service';
 import { FollowService } from './follow.service';
+import { GroupMemberService } from './group-member.service';
 import { UserService } from './user.service';
 
 /**
@@ -21,6 +23,7 @@ export class PostService extends BaseService<IPostModel> {
     private postRepository: PostRepository;
     private userService: UserService;
     private followService: FollowService;
+    private groupMemberService: GroupMemberService;
 
     constructor() {
         const repository = new PostRepository();
@@ -28,6 +31,7 @@ export class PostService extends BaseService<IPostModel> {
         this.postRepository = repository;
         this.userService = new UserService();
         this.followService = new FollowService();
+        this.groupMemberService = new GroupMemberService();
     }
 
     /**
@@ -360,9 +364,20 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
 
-        const user = await this.userService.getByIdOrThrow(userId);
-        const groupIds = (user.groups || [])
-            .map((g) => (g ? g.toString() : null))
+        await this.userService.getByIdOrThrow(userId);
+
+        // Get groups where user is a member
+        const userGroupMemberships =
+            await this.groupMemberService.getUserGroups(userId);
+        const groupIds = userGroupMemberships
+            .map((m) => {
+                const group: any = m.group;
+                if (!group) return null;
+                if (group instanceof Types.ObjectId) return group.toString();
+                if (typeof group === 'string') return group;
+                if (group._id) return group._id.toString();
+                return null;
+            })
             .filter((id): id is string => Boolean(id));
 
         if (groupIds.length === 0) {
