@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { PaginationResult } from '../common/types/base';
-import GroupMember, { IGroupMemberModel } from '../models/groupMember.model';
+import GroupMember, { IGroupMemberModel } from '../models/group-member.model';
 import { BaseRepository } from './base.repository';
 import { POPULATE_USER } from '../common/utils/populate';
 

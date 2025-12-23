@@ -2,8 +2,11 @@ import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
-import { EGroupUserRole, IGroupMemberModel } from '../models/groupMember.model';
-import { GroupMemberRepository } from '../repositories/groupMember.repository';
+import {
+    EGroupUserRole,
+    IGroupMemberModel,
+} from '../models/group-member.model';
+import { GroupMemberRepository } from '../repositories/group-member.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
 
