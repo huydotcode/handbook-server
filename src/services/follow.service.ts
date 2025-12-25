@@ -126,4 +126,14 @@ export class FollowService extends BaseService<IFollowsModel> {
 
         return !!follow;
     }
+
+    /**
+     * Get IDs of users that a user is following
+     * @param userId - User ID
+     * @returns Array of following user IDs
+     */
+    async getFollowingIds(userId: string): Promise<string[]> {
+        this.validateId(userId, 'User ID');
+        return await this.followRepository.findFollowingIds(userId);
+    }
 }
