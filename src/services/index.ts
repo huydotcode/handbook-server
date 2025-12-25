@@ -15,6 +15,6 @@ export * from './location.service';
 export * from './profile.service';
 export * from './item.service';
 export * from './post-interaction.service';
-export * from './conversation-role.service';
 export * from './search.service';
 export * from './upload.service';
+export * from './conversation-member.service';

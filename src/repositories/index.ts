@@ -14,6 +14,6 @@ export * from './media.repository';
 export * from './location.repository';
 export * from './profile.repository';
 export * from './notification.repository';
-export * from './conversation-role.repository';
 export * from './post-interaction.repository';
 export * from './search.repository';
+export * from './conversation-member.repository';
