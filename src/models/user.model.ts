@@ -19,7 +19,6 @@ export interface IUserModel extends Document {
     givenName: string;
     familyName: string;
     locale: string;
-    friends: Types.ObjectId[];
     followersCount: number;
     isOnline: boolean;
     isBlocked: boolean;
@@ -99,24 +98,6 @@ const UserSchema = new Schema<IUserModel>(
             type: String,
             default: '',
         },
-        friends: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'User',
-                validate: {
-                    validator: function (v: Types.ObjectId[]) {
-                        // Check if there are duplicate friends
-                        return (
-                            v.length ===
-                            new Set(
-                                v.map((id: Types.ObjectId) => id.toString())
-                            ).size
-                        );
-                    },
-                    message: 'Friends array contains duplicate friends',
-                },
-            },
-        ],
         followersCount: {
             type: Number,
             default: 0,
