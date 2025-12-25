@@ -8,6 +8,7 @@ export * from './conversation.repository';
 export * from './group.repository';
 export * from './group-member.repository';
 export * from './follow.repository';
+export * from './friendship.repository';
 export * from './item.repository';
 export * from './media.repository';
 export * from './location.repository';

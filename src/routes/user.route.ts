@@ -49,13 +49,6 @@ const userRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
-        path: '/:id/unfriend',
-        method: EApiMethod.POST,
-        controller: userController.unfriendUser,
-        isPrivateRoute: true,
-        isRateLimited: true,
-    },
-    {
         path: '/:id/friends',
         method: EApiMethod.GET,
         controller: userController.getFriends,

@@ -3,6 +3,7 @@ export { CategoryController } from './category.controller';
 export { CommentController } from './comment.controller';
 export { ConversationController } from './conversation.controller';
 export { FollowController } from './follow.controller';
+export { FriendshipController } from './friendship.controller';
 export { GroupController } from './group.controller';
 export { ItemController } from './item.controller';
 export { LocationController } from './location.controller';

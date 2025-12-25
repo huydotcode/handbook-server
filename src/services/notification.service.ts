@@ -11,6 +11,8 @@ import { UserService } from './user.service';
 import { ConversationService } from './conversation.service';
 import { BaseService } from './base.service';
 import { PaginationResult } from '../common/types/base';
+import { FriendshipService } from './friendship.service';
+import { getAuthenticatedUserId } from '../common/utils';
 
 /**
  * Service responsible for notification logic.
@@ -19,6 +21,7 @@ export class NotificationService extends BaseService<INotificationModel> {
     private notificationRepository: NotificationRepository;
     private userService: UserService;
     private conversationService: ConversationService;
+    private friendshipService: FriendshipService;
 
     constructor() {
         const repository = new NotificationRepository();
@@ -26,6 +29,7 @@ export class NotificationService extends BaseService<INotificationModel> {
         this.notificationRepository = repository;
         this.userService = new UserService();
         this.conversationService = new ConversationService();
+        this.friendshipService = new FriendshipService();
     }
 
     /**
@@ -221,11 +225,11 @@ export class NotificationService extends BaseService<INotificationModel> {
         }
 
         // Check if users are already friends
-        const sender = await this.userService.getByIdOrThrow(senderId);
-        const senderFriends = (sender.friends || []).map((f) =>
-            typeof f === 'string' ? f : f.toString()
+        const alreadyFriends = await this.friendshipService.areFriends(
+            senderId,
+            receiverId
         );
-        if (senderFriends.includes(receiverId)) {
+        if (alreadyFriends) {
             throw new AppError(
                 'Users are already friends',
                 HTTP_STATUS.BAD_REQUEST
@@ -347,15 +351,8 @@ export class NotificationService extends BaseService<INotificationModel> {
         await this.userService.getByIdOrThrow(senderId);
         await this.userService.getByIdOrThrow(receiverId);
 
-        // Add to friends lists using $addToSet to avoid duplicates
-        const userRepository = new UserRepository();
-
-        await userRepository.update(senderId, {
-            $addToSet: { friends: new Types.ObjectId(receiverId) },
-        });
-        await userRepository.update(receiverId, {
-            $addToSet: { friends: new Types.ObjectId(senderId) },
-        });
+        // Add friendship using FriendshipService
+        await this.friendshipService.addFriend(receiverId, senderId, userId);
 
         // Create accept notification
         await this.create(
@@ -369,15 +366,8 @@ export class NotificationService extends BaseService<INotificationModel> {
             userId
         );
 
-        // Delete/update original request notification
-        await this.update(
-            notificationId,
-            {
-                isDeleted: true,
-                deletedAt: new Date(),
-            },
-            userId
-        );
+        // Mark original request as handled
+        await this.markFriendRequestAsHandled(notificationId);
 
         // Create private conversation between the two users
         // getPrivateConversation will create if it doesn't exist, or return existing one
@@ -493,6 +483,24 @@ export class NotificationService extends BaseService<INotificationModel> {
                 isDeleted: true,
                 deletedAt: new Date(),
             }
+        );
+    }
+
+    /**
+     * Mark friend request as handled (soft delete)
+     * @param notificationId - Notification ID
+     * @returns Updated notification
+     */
+    async markFriendRequestAsHandled(notificationId: string) {
+        this.validateId(notificationId, 'Notification ID');
+
+        return await this.update(
+            notificationId,
+            {
+                isDeleted: true,
+                deletedAt: new Date(),
+            },
+            'system'
         );
     }
 }

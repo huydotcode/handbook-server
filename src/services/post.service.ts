@@ -13,6 +13,7 @@ import {
 import { PostRepository } from '../repositories/post.repository';
 import { BaseService } from './base.service';
 import { FollowService } from './follow.service';
+import { FriendshipService } from './friendship.service';
 import { GroupMemberService } from './group-member.service';
 import { UserService } from './user.service';
 
@@ -24,6 +25,7 @@ export class PostService extends BaseService<IPostModel> {
     private userService: UserService;
     private followService: FollowService;
     private groupMemberService: GroupMemberService;
+    private friendshipService: FriendshipService;
 
     constructor() {
         const repository = new PostRepository();
@@ -32,6 +34,7 @@ export class PostService extends BaseService<IPostModel> {
         this.userService = new UserService();
         this.followService = new FollowService();
         this.groupMemberService = new GroupMemberService();
+        this.friendshipService = new FriendshipService();
     }
 
     /**
@@ -241,27 +244,9 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
 
-        const user = await this.userService.getByIdOrThrow(userId);
-        const followings = await this.followService.getFollowing(userId);
+        const followingIds = await this.followService.getFollowingIds(userId);
+        const friendIds = await this.friendshipService.getFriendIds(userId);
 
-        const followingIds = followings
-            .map((f) => {
-                if (!f?.following) {
-                    return null;
-                }
-                return typeof f.following === 'string'
-                    ? f.following
-                    : f.following.toString();
-            })
-            .filter((id): id is string => Boolean(id));
-        const friendIds = (user.friends || [])
-            .map((f) => {
-                if (!f) return null;
-                return typeof f === 'string' ? f : f.toString();
-            })
-            .filter((id): id is string => Boolean(id));
-
-        // Handle empty arrays
         if (followingIds.length === 0 && friendIds.length === 0) {
             return {
                 data: [],
@@ -318,10 +303,7 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
 
-        const user = await this.userService.getByIdOrThrow(userId);
-        const friendIds = (user.friends || [])
-            .map((f) => (f ? f.toString() : null))
-            .filter((id): id is string => Boolean(id));
+        const friendIds = await this.friendshipService.getFriendIds(userId);
 
         if (friendIds.length === 0) {
             return {

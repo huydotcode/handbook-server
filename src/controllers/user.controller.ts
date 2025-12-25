@@ -101,32 +101,6 @@ export class UserController {
     };
 
     /**
-     * POST /api/v1/users/:id/unfriend
-     * Unfriend a user.
-     */
-    public unfriendUser = async (
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> => {
-        try {
-            const userId = getAuthenticatedUserId(req);
-            const friendId = req.params.id;
-            validateRequiredParam(friendId, 'Friend ID');
-
-            await this.userService.unfriendUser(userId, friendId);
-
-            ResponseUtil.success(
-                res,
-                { success: true },
-                'User unfriended successfully'
-            );
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    /**
      * GET /api/v1/users/:id/profile
      * Get user profile (combined user and profile data).
      */

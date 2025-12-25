@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
-import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
 import { IUserModel } from '../models/user.model';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
+import { FriendshipService } from './friendship.service';
 
 export class UserService extends BaseService<IUserModel> {
     private userRepository: UserRepository;
@@ -147,7 +147,8 @@ export class UserService extends BaseService<IUserModel> {
     }
 
     /**
-     * Retrieve populated friends for a given user.
+     * Retrieve friends for a given user using FriendshipService.
+     * Note: This method is deprecated. Use FriendshipService instead.
      */
     async getUserFriends(userId?: string) {
         if (!userId) {
@@ -156,45 +157,8 @@ export class UserService extends BaseService<IUserModel> {
 
         this.validateId(userId);
 
-        const friends = await this.userRepository.findUserFriends(userId);
-        return friends;
-    }
-
-    /**
-     * Unfriend a user (remove from friends list both ways).
-     * @param userId - User ID
-     * @param friendId - Friend ID to unfriend
-     */
-    async unfriendUser(userId: string, friendId: string): Promise<void> {
-        this.validateId(userId, 'User ID');
-        this.validateId(friendId, 'Friend ID');
-
-        // Check if users are friends
-        const user = await this.getByIdOrThrow(userId);
-        const friend = await this.getByIdOrThrow(friendId);
-
-        const userFriends = (user.friends || []).map((f) =>
-            typeof f === 'string' ? f : f.toString()
-        );
-        const friendFriends = (friend.friends || []).map((f) =>
-            typeof f === 'string' ? f : f.toString()
-        );
-
-        if (!userFriends.includes(friendId)) {
-            throw new AppError(
-                'Users are not friends',
-                HTTP_STATUS.BAD_REQUEST
-            );
-        }
-
-        // Remove from both users' friends lists
-        await this.userRepository.update(userId, {
-            $pull: { friends: new Types.ObjectId(friendId) },
-        });
-
-        await this.userRepository.update(friendId, {
-            $pull: { friends: new Types.ObjectId(userId) },
-        });
+        const friendshipService = new FriendshipService();
+        return await friendshipService.getFriends(userId);
     }
 
     /**

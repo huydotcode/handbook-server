@@ -8,6 +8,7 @@ export * from './group-member.service';
 export * from './message.service';
 export * from './conversation.service';
 export * from './follow.service';
+export * from './friendship.service';
 export * from './notification.service';
 export * from './media.service';
 export * from './location.service';
