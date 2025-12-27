@@ -9,7 +9,6 @@ export interface IConversationModel extends Document {
     _id: string;
     title: string;
     creator: Types.ObjectId;
-    participants: Types.ObjectId[];
     group: Types.ObjectId;
     lastMessage: Types.ObjectId;
     avatar: Types.ObjectId;
@@ -24,7 +23,6 @@ export interface IConversationModel extends Document {
 export interface IConversationInput {
     title: string;
     creator: Types.ObjectId;
-    participants: Types.ObjectId[];
     type: EConversationType;
     group: Types.ObjectId;
     lastMessage: Types.ObjectId;
@@ -41,11 +39,6 @@ const ConversationModel = new Schema<IConversationModel>(
     {
         title: { type: String, default: '' },
         creator: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-        participants: {
-            type: [Schema.Types.ObjectId],
-            ref: 'User',
-            required: true,
-        },
         lastMessage: {
             type: Schema.Types.ObjectId,
             ref: 'Message',
@@ -87,7 +80,6 @@ const ConversationModel = new Schema<IConversationModel>(
 
 ConversationModel.index({ title: 'text' });
 ConversationModel.index({ type: 1 });
-ConversationModel.index({ participants: 1 });
 ConversationModel.index({ group: 1 });
 ConversationModel.index({ lastMessage: 1 });
 ConversationModel.index({ avatar: 1 });

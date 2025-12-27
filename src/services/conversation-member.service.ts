@@ -3,6 +3,7 @@ import { AppError } from '../common/errors/app.error';
 import { IConversationMemberModel } from '../models/conversation-member.model';
 import { ConversationMemberRepository } from '../repositories/conversation-member.repository';
 import { BaseService } from './base.service';
+import { Types } from 'mongoose';
 
 export class ConversationMemberService extends BaseService<IConversationMemberModel> {
     private conversationMemberRepository: ConversationMemberRepository;
@@ -24,8 +25,22 @@ export class ConversationMemberService extends BaseService<IConversationMemberMo
             throw new AppError('Invalid role', HTTP_STATUS.BAD_REQUEST);
         }
 
+        // Check if member already exists
+        const existingMember = await this.conversationMemberRepository.findOne({
+            conversation: conversationId,
+            user: userId,
+        });
+
+        if (existingMember) {
+            return existingMember;
+        }
+
         return await this.create(
-            { conversation: conversationId, user: userId, role } as any,
+            {
+                conversation: new Types.ObjectId(conversationId),
+                user: new Types.ObjectId(userId),
+                role,
+            } as any,
             userId
         );
     }
@@ -62,6 +77,15 @@ export class ConversationMemberService extends BaseService<IConversationMemberMo
         this.validateId(conversationId, 'Conversation ID');
         return await this.conversationMemberRepository.findByConversation(
             conversationId
+        );
+    }
+
+    async isMember(conversationId: string, userId: string): Promise<boolean> {
+        this.validateId(conversationId, 'Conversation ID');
+        this.validateId(userId, 'User ID');
+        return await this.conversationMemberRepository.isMember(
+            conversationId,
+            userId
         );
     }
 }

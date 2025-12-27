@@ -16,6 +16,13 @@ const conversationRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/:id/members',
+        method: EApiMethod.GET,
+        controller: conversationController.listMembers,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/:id/restore',
         method: EApiMethod.POST,
         controller: conversationController.restoreConversation,

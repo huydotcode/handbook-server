@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { ConversationService } from '../services';
+import { ConversationService, ConversationMemberService } from '../services';
 import { ResponseUtil } from '../common/utils/response';
 import {
     getPaginationParams,
@@ -10,9 +10,11 @@ import {
 
 export class ConversationController {
     private conversationService: ConversationService;
+    private conversationMemberService: ConversationMemberService;
 
     constructor() {
         this.conversationService = new ConversationService();
+        this.conversationMemberService = new ConversationMemberService();
     }
 
     /**
@@ -370,6 +372,45 @@ export class ConversationController {
                 res,
                 conversation,
                 'Conversation restored successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/conversations/:id/members
+     * List members of a conversation
+     */
+    public listMembers = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const id = req.params.id;
+            validateRequiredParam(id, 'Conversation ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const isAllowed = await this.conversationMemberService.isMember(
+                id,
+                userId
+            );
+            if (!isAllowed) {
+                return ResponseUtil.forbidden(
+                    res,
+                    'You are not a member of this conversation'
+                );
+            }
+
+            const members = await this.conversationMemberService.listMembers(
+                id
+            );
+
+            ResponseUtil.success(
+                res,
+                members,
+                'Conversation members retrieved successfully'
             );
         } catch (error) {
             next(error);

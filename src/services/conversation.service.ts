@@ -1,42 +1,43 @@
-import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import {
     AppError,
     ForbiddenError,
     NotFoundError,
 } from '../common/errors/app.error';
+import { PaginationParams, PaginationResult } from '../common/types/base';
 import {
+    EConversationType,
     IConversationInput,
     IConversationModel,
-    EConversationType,
 } from '../models/conversation.model';
 import { ConversationRepository } from '../repositories/conversation.repository';
-import { PaginationParams, PaginationResult } from '../common/types/base';
 import { BaseService } from './base.service';
+import { ConversationMemberService } from './conversation-member.service';
 
 export class ConversationService extends BaseService<IConversationModel> {
     private conversationRepository: ConversationRepository;
+    private conversationMemberService: ConversationMemberService;
 
     constructor() {
         const repository = new ConversationRepository();
         super(repository);
         this.conversationRepository = repository;
+        this.conversationMemberService = new ConversationMemberService();
     }
 
     /**
      * Create a new conversation
      * @param data - Conversation data
      * @param userId - User ID creating the conversation
+     * @param participants - Optional participants to add (for initialization)
      * @returns Created conversation
      */
     async createConversation(
         data: Partial<IConversationInput>,
-        userId: string
+        userId: string,
+        participants?: string[]
     ): Promise<IConversationModel> {
         try {
-            // Validate required fields
-            this.validateRequiredFields(data, ['participants']);
-
             // Set creator
             data.creator = userId as any;
 
@@ -46,6 +47,34 @@ export class ConversationService extends BaseService<IConversationModel> {
             }
 
             const conversation = await this.create(data, userId);
+
+            // Validate conversation was created with ID
+            if (!conversation._id) {
+                throw new AppError(
+                    'Failed to create conversation: no ID generated',
+                    HTTP_STATUS.INTERNAL_SERVER_ERROR
+                );
+            }
+
+            // Add creator as admin member
+            await this.conversationMemberService.addMember(
+                conversation._id.toString(),
+                userId,
+                'admin'
+            );
+
+            // Add other participants as members (if provided)
+            if (participants && participants.length > 0) {
+                for (const participantId of participants) {
+                    if (participantId) {
+                        await this.conversationMemberService.addMember(
+                            conversation._id.toString(),
+                            participantId,
+                            'member'
+                        );
+                    }
+                }
+            }
 
             return conversation;
         } catch (error) {
@@ -62,12 +91,12 @@ export class ConversationService extends BaseService<IConversationModel> {
     }
 
     /**
-     * Get conversations by participant with pagination
+     * Get conversations by member with pagination
      * @param userId - User ID
      * @param params - Pagination parameters
      * @returns Paginated conversations
      */
-    async getConversationsByParticipant(
+    async getConversationsByMember(
         userId: string,
         params: PaginationParams
     ): Promise<PaginationResult<IConversationModel>> {
@@ -77,7 +106,7 @@ export class ConversationService extends BaseService<IConversationModel> {
             const { page = 1, pageSize = 20 } = params;
 
             const result =
-                await this.conversationRepository.findByParticipantWithPagination(
+                await this.conversationRepository.findByMemberWithPagination(
                     userId,
                     page,
                     pageSize
@@ -95,6 +124,19 @@ export class ConversationService extends BaseService<IConversationModel> {
                 HTTP_STATUS.INTERNAL_SERVER_ERROR
             );
         }
+    }
+
+    /**
+     * Get conversations by participant with pagination (deprecated - use getConversationsByMember)
+     * @param userId - User ID
+     * @param params - Pagination parameters
+     * @returns Paginated conversations
+     */
+    async getConversationsByParticipant(
+        userId: string,
+        params: PaginationParams
+    ): Promise<PaginationResult<IConversationModel>> {
+        return this.getConversationsByMember(userId, params);
     }
 
     /**
@@ -121,15 +163,14 @@ export class ConversationService extends BaseService<IConversationModel> {
                 );
             }
 
-            // Check if user is participant (for private conversations)
+            // Check if user is member (for private conversations)
             if (conversation.type === EConversationType.PRIVATE) {
-                const isParticipant =
-                    await this.conversationRepository.isParticipant(
-                        conversationId,
-                        userId
-                    );
+                const isMember = await this.conversationMemberService.isMember(
+                    conversationId,
+                    userId
+                );
 
-                if (!isParticipant) {
+                if (!isMember) {
                     throw new AppError(
                         'You do not have permission to access this conversation',
                         HTTP_STATUS.FORBIDDEN
@@ -188,7 +229,7 @@ export class ConversationService extends BaseService<IConversationModel> {
     }
 
     /**
-     * Add participant to conversation
+     * Add participant to conversation (via ConversationMember)
      * @param conversationId - Conversation ID
      * @param participantId - User ID to add
      * @param userId - User ID performing the action
@@ -203,33 +244,28 @@ export class ConversationService extends BaseService<IConversationModel> {
             this.validateId(conversationId, 'Conversation ID');
             this.validateId(participantId, 'Participant ID');
 
-            // Check if requester is participant
-            const isParticipant =
-                await this.conversationRepository.isParticipant(
-                    conversationId,
-                    userId
-                );
+            // Check if requester is a member
+            const isMember = await this.conversationMemberService.isMember(
+                conversationId,
+                userId
+            );
 
-            if (!isParticipant) {
+            if (!isMember) {
                 throw new AppError(
                     'You do not have permission to add participants',
                     HTTP_STATUS.FORBIDDEN
                 );
             }
 
-            const conversation =
-                await this.conversationRepository.addParticipant(
-                    conversationId,
-                    participantId
-                );
+            // Add new participant as member
+            await this.conversationMemberService.addMember(
+                conversationId,
+                participantId,
+                'member'
+            );
 
-            if (!conversation) {
-                throw new NotFoundError(
-                    `Conversation not found with id: ${conversationId}`
-                );
-            }
-
-            return conversation as IConversationModel;
+            const conversation = await this.getByIdOrThrow(conversationId);
+            return conversation;
         } catch (error) {
             if (error instanceof NotFoundError || error instanceof AppError) {
                 throw error;
@@ -244,7 +280,7 @@ export class ConversationService extends BaseService<IConversationModel> {
     }
 
     /**
-     * Remove participant from conversation
+     * Remove participant from conversation (via ConversationMember)
      * @param conversationId - Conversation ID
      * @param participantId - User ID to remove
      * @param userId - User ID performing the action
@@ -259,19 +295,27 @@ export class ConversationService extends BaseService<IConversationModel> {
             this.validateId(conversationId, 'Conversation ID');
             this.validateId(participantId, 'Participant ID');
 
-            const conversation =
-                await this.conversationRepository.removeParticipant(
-                    conversationId,
-                    participantId
-                );
+            // Check if requester is a member
+            const isMember = await this.conversationMemberService.isMember(
+                conversationId,
+                userId
+            );
 
-            if (!conversation) {
-                throw new NotFoundError(
-                    `Conversation not found with id: ${conversationId}`
+            if (!isMember) {
+                throw new AppError(
+                    'You do not have permission to remove participants',
+                    HTTP_STATUS.FORBIDDEN
                 );
             }
 
-            return conversation as IConversationModel;
+            // Remove participant
+            await this.conversationMemberService.removeMember(
+                conversationId,
+                participantId
+            );
+
+            const conversation = await this.getByIdOrThrow(conversationId);
+            return conversation;
         } catch (error) {
             if (error instanceof NotFoundError || error instanceof AppError) {
                 throw error;
@@ -301,14 +345,13 @@ export class ConversationService extends BaseService<IConversationModel> {
             this.validateId(conversationId, 'Conversation ID');
             this.validateId(messageId, 'Message ID');
 
-            // Check if user is participant
-            const isParticipant =
-                await this.conversationRepository.isParticipant(
-                    conversationId,
-                    userId
-                );
+            // Check if user is member
+            const isMember = await this.conversationMemberService.isMember(
+                conversationId,
+                userId
+            );
 
-            if (!isParticipant) {
+            if (!isMember) {
                 throw new ForbiddenError(
                     'You do not have permission to pin messages'
                 );
@@ -354,6 +397,18 @@ export class ConversationService extends BaseService<IConversationModel> {
         try {
             this.validateId(conversationId, 'Conversation ID');
             this.validateId(messageId, 'Message ID');
+
+            // Check if user is member
+            const isMember = await this.conversationMemberService.isMember(
+                conversationId,
+                userId
+            );
+
+            if (!isMember) {
+                throw new ForbiddenError(
+                    'You do not have permission to unpin messages'
+                );
+            }
 
             const conversation = await this.conversationRepository.unpinMessage(
                 conversationId,
@@ -530,13 +585,10 @@ export class ConversationService extends BaseService<IConversationModel> {
                 isNew = true;
                 conversation = await this.createConversation(
                     {
-                        participants: [
-                            new Types.ObjectId(userId),
-                            new Types.ObjectId(friendId),
-                        ],
                         type: EConversationType.PRIVATE,
                     },
-                    userId
+                    userId,
+                    [userId, friendId]
                 );
             }
 
