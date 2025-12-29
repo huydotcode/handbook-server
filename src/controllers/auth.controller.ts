@@ -18,11 +18,68 @@ export class AuthController {
 
             const result = await authService.login(email, password);
 
+            // Set refresh token in httpOnly cookie
+            res.cookie('refreshToken', result.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite:
+                    process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+
             ResponseUtil.success(
                 res,
-                { token: result.token },
+                { accessToken: result.accessToken, user: result.user },
                 'Đăng nhập thành công'
             );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * Refresh access token
+     * POST /api/v1/auth/refresh
+     */
+    public refresh = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const refreshToken = req.cookies.refreshToken;
+
+            if (!refreshToken) {
+                ResponseUtil.error(res, 'Không tìm thấy refresh token', 401);
+                return;
+            }
+
+            const result = await authService.refreshAccessToken(refreshToken);
+
+            ResponseUtil.success(
+                res,
+                { accessToken: result.accessToken },
+                'Refresh token thành công'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * Logout user
+     * POST /api/v1/auth/logout
+     */
+    public logout = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            // Clear refresh token cookie
+            res.clearCookie('refreshToken');
+
+            ResponseUtil.success(res, null, 'Đăng xuất thành công');
         } catch (error) {
             next(error);
         }

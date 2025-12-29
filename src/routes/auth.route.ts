@@ -19,6 +19,16 @@ const authRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/refresh',
+        method: EApiMethod.POST,
+        controller: authController.refresh,
+    },
+    {
+        path: '/logout',
+        method: EApiMethod.POST,
+        controller: authController.logout,
+    },
+    {
         path: '/send-otp',
         method: EApiMethod.POST,
         controller: authController.sendOTP,

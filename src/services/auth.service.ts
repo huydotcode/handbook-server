@@ -10,11 +10,11 @@ import { jwt } from '../common/utils';
 import { EMailType, sendOtpEmail } from '../common/utils/mail';
 import redis from '../common/utils/redis';
 import Profile from '../models/profile.model';
-import User from '../models/user.model';
 import { UserRepository } from '../repositories';
 
 export interface LoginResult {
-    token: string;
+    accessToken: string;
+    refreshToken: string;
     user: {
         id: string;
         email: string;
@@ -82,7 +82,7 @@ export class AuthService {
             throw new UnauthorizedError('Mật khẩu không chính xác');
         }
 
-        const token = jwt.sign({
+        const accessToken = jwt.sign({
             id: user._id.toString(),
             email: user.email,
             name: user.name,
@@ -91,8 +91,13 @@ export class AuthService {
             username: user.username || '',
         });
 
+        const refreshToken = jwt.signRefreshToken({
+            id: user._id.toString(),
+        });
+
         return {
-            token,
+            accessToken,
+            refreshToken,
             user: {
                 id: user._id.toString(),
                 email: user.email,
@@ -102,6 +107,43 @@ export class AuthService {
                 username: user.username || '',
             },
         };
+    }
+
+    /**
+     * Refresh access token using refresh token
+     * @param refreshToken - Refresh token from cookie
+     * @returns New access token
+     * @throws UnauthorizedError if refresh token is invalid
+     * @throws NotFoundError if user not found
+     */
+    async refreshAccessToken(
+        refreshToken: string
+    ): Promise<{ accessToken: string }> {
+        try {
+            // Verify refresh token
+            const payload = jwt.verifyRefreshToken(refreshToken);
+
+            // Get user from database
+            const user = await this.userRepository.findById(payload.id);
+
+            if (!user) {
+                throw new NotFoundError('Người dùng không tồn tại');
+            }
+
+            // Generate new access token
+            const accessToken = jwt.sign({
+                id: user._id.toString(),
+                email: user.email,
+                name: user.name,
+                picture: user.avatar,
+                role: user.role,
+                username: user.username || '',
+            });
+
+            return { accessToken };
+        } catch (error) {
+            throw new UnauthorizedError('Refresh token không hợp lệ');
+        }
     }
 
     /**

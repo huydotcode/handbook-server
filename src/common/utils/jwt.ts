@@ -13,21 +13,38 @@ interface Payload {
     // exp: number;
 }
 
+interface RefreshPayload {
+    id: string;
+    // iat: number;
+    // exp: number;
+}
+
+const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'my-secret';
+const REFRESH_TOKEN_SECRET =
+    process.env.JWT_REFRESH_SECRET || 'my-refresh-secret';
+
+export const JWT_EXPIRATION = '15m';
+export const JWT_REFRESH_EXPIRATION = '7d';
+
 export const jwt = {
     sign: (payload: Payload): string => {
-        return jwtWebToken.sign(
-            payload,
-            process.env.JWT_SECRET || 'my-secret',
-            {
-                expiresIn: '1d',
-            }
-        );
+        return jwtWebToken.sign(payload, ACCESS_TOKEN_SECRET, {
+            expiresIn: JWT_EXPIRATION, // Short-lived access token
+        });
     },
     verify: (token: string): Payload => {
+        return jwtWebToken.verify(token, ACCESS_TOKEN_SECRET) as Payload;
+    },
+    signRefreshToken: (payload: RefreshPayload): string => {
+        return jwtWebToken.sign(payload, REFRESH_TOKEN_SECRET, {
+            expiresIn: JWT_REFRESH_EXPIRATION,
+        });
+    },
+    verifyRefreshToken: (token: string): RefreshPayload => {
         return jwtWebToken.verify(
             token,
-            process.env.JWT_SECRET || 'my-secret'
-        ) as Payload;
+            REFRESH_TOKEN_SECRET
+        ) as RefreshPayload;
     },
 };
 
