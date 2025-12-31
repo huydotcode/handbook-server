@@ -1,10 +1,12 @@
 import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
+import { POPULATE_USER } from '../common/utils/populate';
 import Conversation from '../models/conversation.model';
 import { IMessageModel } from '../models/message.model';
 import { MessageRepository } from '../repositories/message.repository';
 import { BaseService } from './base.service';
+import { eventService } from './event.service';
 
 /**
  * Service responsible for message-related business logic.
@@ -66,7 +68,30 @@ export class MessageService extends BaseService<IMessageModel> {
             data.isPin = false;
         }
 
-        return await this.create(data, userId);
+        const message = await this.create(data, userId, [
+            { path: 'sender', select: POPULATE_USER },
+            { path: 'conversation', select: 'title group' },
+            { path: 'media' },
+            { path: 'readBy.user', select: POPULATE_USER },
+        ]);
+
+        try {
+            const conversationId =
+                (message as any)?.conversation?._id?.toString?.() ||
+                (message as any)?.conversation?.toString?.() ||
+                data.conversation.toString();
+
+            await eventService.publishMessageCreated({
+                roomId: conversationId,
+                conversationId,
+                conversationTitle: (message as any)?.conversation?.title,
+                message: message,
+            });
+        } catch (error) {
+            console.error('Error publishing message created event:', error);
+        }
+
+        return message;
     }
 
     /**
@@ -190,6 +215,12 @@ export class MessageService extends BaseService<IMessageModel> {
             throw new NotFoundError(`Message not found with id: ${messageId}`);
         }
 
+        try {
+            await eventService.publishMessagePinned({ message });
+        } catch (error) {
+            console.error('Error publishing message pinned event:', error);
+        }
+
         return message;
     }
 
@@ -209,6 +240,12 @@ export class MessageService extends BaseService<IMessageModel> {
 
         if (!message) {
             throw new NotFoundError(`Message not found with id: ${messageId}`);
+        }
+
+        try {
+            await eventService.publishMessageUnpinned({ message });
+        } catch (error) {
+            console.error('Error publishing message unpinned event:', error);
         }
 
         return message;
@@ -240,6 +277,19 @@ export class MessageService extends BaseService<IMessageModel> {
             throw new NotFoundError(`Message not found with id: ${messageId}`);
         }
 
+        try {
+            const conversationId =
+                typeof message.conversation === 'string'
+                    ? message.conversation
+                    : message.conversation.toString();
+            await eventService.publishMessageRead({
+                roomId: conversationId,
+                userId,
+            });
+        } catch (error) {
+            console.error('Error publishing message read event:', error);
+        }
+
         return message;
     }
 
@@ -267,10 +317,25 @@ export class MessageService extends BaseService<IMessageModel> {
             );
         }
 
-        // Delete message
         const deleted = await this.delete(messageId, userId);
         if (!deleted) {
             throw new NotFoundError(`Message not found with id: ${messageId}`);
+        }
+
+        const populatedMessage =
+            await this.messageRepository.findByIdAndPopulate(messageId, [
+                { path: 'sender', select: POPULATE_USER },
+                { path: 'conversation', select: 'title group' },
+                { path: 'media' },
+                { path: 'readBy.user', select: POPULATE_USER },
+            ]);
+
+        try {
+            await eventService.publishMessageDeleted({
+                message: populatedMessage || message,
+            });
+        } catch (error) {
+            console.error('Error publishing message deleted event:', error);
         }
 
         return true;

@@ -7,16 +7,21 @@ import {
 import { PostInteractionRepository } from '../repositories/post-interaction.repository';
 import { PostService } from './post.service';
 import { BaseService } from './base.service';
+import { eventService } from './event.service';
+import { NotificationService } from './notification.service';
+import { ENotificationType } from '../models/notification.model';
 
 export class PostInteractionService extends BaseService<IPostInteractionModel> {
     private postInteractionRepository: PostInteractionRepository;
     private postService: PostService;
+    private notificationService: NotificationService;
 
     constructor() {
         const repository = new PostInteractionRepository();
         super(repository);
         this.postInteractionRepository = repository;
         this.postService = new PostService();
+        this.notificationService = new NotificationService();
     }
 
     /**
@@ -95,6 +100,43 @@ export class PostInteractionService extends BaseService<IPostInteractionModel> {
             // Update post counts (increment)
             if (type === EPostInteractionType.LOVE) {
                 await this.postService.incrementPostCount(postId, 'lovesCount');
+
+                // Get post to get author ID
+                try {
+                    const post = await this.postService.getById(postId);
+
+                    if (post && post.author) {
+                        const authorId =
+                            typeof post.author === 'string'
+                                ? post.author
+                                : post.author.toString();
+
+                        if (authorId !== userId) {
+                            // Create notification
+                            const notification =
+                                await this.notificationService.create(
+                                    {
+                                        sender: new Types.ObjectId(userId),
+                                        receiver: new Types.ObjectId(authorId),
+                                        type: ENotificationType.LIKE_POST,
+                                        isRead: false,
+                                        isDeleted: false,
+                                    },
+                                    userId
+                                );
+
+                            // Publish event for real-time broadcasting
+                            await eventService.publishPostLiked({
+                                postId,
+                                authorId,
+                                userId,
+                                notification,
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error publishing post liked event:', error);
+                }
             } else if (type === EPostInteractionType.SHARE) {
                 await this.postService.incrementPostCount(
                     postId,

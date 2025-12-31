@@ -1,18 +1,17 @@
 import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
-import { AppError, NotFoundError } from '../common/errors/app.error';
+import { AppError } from '../common/errors/app.error';
+import { PaginationResult } from '../common/types/base';
 import {
     ENotificationType,
     INotificationModel,
 } from '../models/notification.model';
 import { NotificationRepository } from '../repositories/notification.repository';
-import { UserRepository } from '../repositories/user.repository';
-import { UserService } from './user.service';
-import { ConversationService } from './conversation.service';
 import { BaseService } from './base.service';
-import { PaginationResult } from '../common/types/base';
+import { ConversationService } from './conversation.service';
+import { eventService } from './event.service';
 import { FriendshipService } from './friendship.service';
-import { getAuthenticatedUserId } from '../common/utils';
+import { UserService } from './user.service';
 
 /**
  * Service responsible for notification logic.
@@ -30,6 +29,30 @@ export class NotificationService extends BaseService<INotificationModel> {
         this.userService = new UserService();
         this.conversationService = new ConversationService();
         this.friendshipService = new FriendshipService();
+    }
+
+    /**
+     * Override create to auto-emit notification events
+     * @param data - Notification data
+     * @param userId - User ID creating the notification
+     * @param populateOptions - Optional populate options
+     * @returns Created notification
+     */
+    async create(
+        data: Partial<INotificationModel>,
+        userId: string,
+        populateOptions?: any
+    ): Promise<INotificationModel> {
+        const notification = await super.create(data, userId, populateOptions);
+
+        // Auto emit notification event for all notifications
+        try {
+            await eventService.publishNotificationSent({ notification });
+        } catch (error) {
+            console.error('Error publishing notification event:', error);
+        }
+
+        return notification;
     }
 
     /**
@@ -251,7 +274,7 @@ export class NotificationService extends BaseService<INotificationModel> {
             );
         }
 
-        // Create friend request notification
+        // Create friend request notification (auto-emits via create method)
         return await this.create(
             {
                 sender: new Types.ObjectId(senderId),
