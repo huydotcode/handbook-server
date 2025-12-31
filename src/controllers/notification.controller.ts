@@ -233,6 +233,34 @@ export class NotificationController {
     };
 
     /**
+     * GET /api/v1/notifications/:id
+     * Get notification by ID.
+     */
+    public getNotificationById = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const notificationId = req.params.id;
+            validateRequiredParam(notificationId, 'Notification ID');
+
+            const notification =
+                await this.notificationService.getNotificationById(
+                    notificationId
+                );
+
+            ResponseUtil.success(
+                res,
+                notification,
+                'Notification retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
      * PUT /api/v1/notifications/read-all
      * Mark all notifications as read.
      */

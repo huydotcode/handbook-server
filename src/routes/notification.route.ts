@@ -72,6 +72,13 @@ const notificationRoutes: IApiRoute[] = [
         isPrivateRoute: true,
         isRateLimited: true,
     },
+    {
+        path: '/:id',
+        method: EApiMethod.GET,
+        controller: notificationController.getNotificationById,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
     // Dynamic routes last
     {
         path: '/:id',
