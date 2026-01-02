@@ -55,19 +55,21 @@ export class AuthService {
         this.userRepository = new UserRepository();
     }
     /**
-     * Login user with email and password
-     * @param email - User email
+     * Login user with email/username and password
+     * @param account - User email or username
      * @param password - User password
      * @returns Login result with token and user info
      * @throws NotFoundError if user not found
      * @throws UnauthorizedError if password is incorrect
      */
-    async login(email: string, password: string): Promise<LoginResult> {
-        if (!email || !password) {
-            throw new ValidationError('Email và mật khẩu là bắt buộc');
+    async login(account: string, password: string): Promise<LoginResult> {
+        if (!account || !password) {
+            throw new ValidationError('Tài khoản và mật khẩu là bắt buộc');
         }
 
-        const user = await this.userRepository.findByEmail(email.toLowerCase());
+        const user = await this.userRepository.findByEmailOrUsername(
+            account.toLowerCase()
+        );
 
         if (!user) {
             throw new NotFoundError(

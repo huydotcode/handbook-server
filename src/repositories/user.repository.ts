@@ -7,8 +7,29 @@ export class UserRepository extends BaseRepository<IUserModel> {
         super(User);
     }
 
+    /**
+     * Find user by email
+     * @param email User email
+     * @returns User document
+     */
     async findByEmail(email: string) {
         return await this.model.findOne({ email: email.toLowerCase() }).lean();
+    }
+
+    /**
+     * Find user by email or username
+     * @param value User email or username
+     * @returns User document
+     */
+    async findByEmailOrUsername(value: string) {
+        return await this.model
+            .findOne({
+                $or: [
+                    { email: value.toLowerCase() },
+                    { username: value.toLowerCase() },
+                ],
+            })
+            .lean();
     }
 
     /**
