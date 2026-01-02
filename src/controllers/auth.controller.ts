@@ -14,9 +14,9 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { email, password } = req.body;
+            const { account, password } = req.body;
 
-            const result = await authService.login(email, password);
+            const result = await authService.login(account, password);
 
             // Set refresh token in httpOnly cookie
             res.cookie('refreshToken', result.refreshToken, {
