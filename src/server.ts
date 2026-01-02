@@ -1,5 +1,5 @@
 import app from './app';
-import { config, validateConfig } from './common/utils/config';
+import { env } from './common/config';
 import {
     connectToMongo,
     disconnectFromMongo,
@@ -13,16 +13,13 @@ let server: ReturnType<typeof app.listen> | null = null;
  */
 const startServer = async (): Promise<void> => {
     try {
-        // Validate configuration
-        validateConfig();
-
         // Connect to MongoDB
         await connectToMongo();
 
         // Start the Express server
-        server = app.listen(config.port, () => {
+        server = app.listen(env.PORT, () => {
             console.log(
-                `Server is running on port: ${config.port} (${config.nodeEnv})`
+                `Server is running on port: ${env.PORT} (${env.NODE_ENV})`
             );
         });
 
@@ -33,9 +30,9 @@ const startServer = async (): Promise<void> => {
             }
 
             const bind =
-                typeof config.port === 'string'
-                    ? `Pipe ${config.port}`
-                    : `Port ${config.port}`;
+                typeof env.PORT === 'string'
+                    ? `Pipe ${env.PORT}`
+                    : `Port ${env.PORT}`;
 
             switch (error.code) {
                 case 'EACCES':

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { JwtDecoded } from '../common/types/jwt';
 import { EUserRole } from '../models/user.model';
 import { ResponseUtil } from '../common/utils';
+import { env } from '../common/config';
 
 export default async function adminMiddleware(
     req: Request,
@@ -19,7 +20,7 @@ export default async function adminMiddleware(
         return ResponseUtil.unauthorized(res, 'Unauthorized');
     }
 
-    const secretKey = process.env.JWT_SECRET;
+    const secretKey = env.JWT_SECRET;
 
     if (!secretKey) {
         return ResponseUtil.internalError(res, 'Internal server error');

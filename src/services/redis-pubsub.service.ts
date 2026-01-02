@@ -1,11 +1,12 @@
 import Redis from 'ioredis';
+import { env } from '../common/config';
 
 class RedisPubSubService {
     private publisher: Redis;
     private isConnected: boolean = false;
 
     constructor() {
-        const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+        const redisUrl = env.REDIS_URL;
 
         this.publisher = new Redis(redisUrl);
         this.setupEventHandlers();

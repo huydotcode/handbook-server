@@ -1,10 +1,10 @@
 import Redis from 'ioredis';
-import { config } from './config';
+import { env } from '../config';
 
 const redis = new Redis({
-    host: config.redisHost,
-    port: config.redisPort,
-    password: config.redisPassword,
+    host: env.REDIS_HOST || 'localhost',
+    port: Number(env.REDIS_PORT) || 6379,
+    password: env.REDIS_PASSWORD || '',
 });
 
 export default redis;

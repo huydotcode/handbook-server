@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { JwtDecoded } from '../common/types/jwt';
 import { ResponseUtil } from '../common/utils';
+import { env } from '../common/config';
 
 export default async function authMiddleware(
     req: Request,
@@ -20,7 +21,7 @@ export default async function authMiddleware(
             return ResponseUtil.unauthorized(res, 'Unauthorized');
         }
 
-        const secretKey = process.env.JWT_SECRET;
+        const secretKey = env.JWT_SECRET;
         if (!secretKey) {
             return ResponseUtil.internalError(res, 'Internal server error');
         }

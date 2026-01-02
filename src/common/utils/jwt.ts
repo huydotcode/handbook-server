@@ -1,6 +1,7 @@
+import { Request } from 'express';
 import { IncomingHttpHeaders } from 'http';
 import * as jwtWebToken from 'jsonwebtoken';
-import { Request } from 'express';
+import { env } from '../config';
 
 interface Payload {
     id: string;
@@ -19,9 +20,8 @@ interface RefreshPayload {
     // exp: number;
 }
 
-const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET || 'my-secret';
-const REFRESH_TOKEN_SECRET =
-    process.env.JWT_REFRESH_SECRET || 'my-refresh-secret';
+const ACCESS_TOKEN_SECRET = env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET = env.JWT_REFRESH_SECRET;
 
 export const JWT_EXPIRATION = '15m';
 export const JWT_REFRESH_EXPIRATION = '7d';

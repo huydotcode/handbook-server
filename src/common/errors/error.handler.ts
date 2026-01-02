@@ -3,6 +3,7 @@ import { CastError } from 'mongoose';
 import { HTTP_STATUS } from '../constants/status-code';
 import { ResponseUtil } from '../utils/response';
 import { AppError } from './app.error';
+import { env } from '../config';
 
 /**
  * Handle Mongoose CastError
@@ -125,7 +126,7 @@ export const globalErrorHandler = (
     });
 
     // Send appropriate error response based on environment
-    if (process.env.NODE_ENV === 'development') {
+    if (env.NODE_ENV === 'development') {
         sendErrorDev(error, res);
     } else {
         sendErrorProd(error, res);

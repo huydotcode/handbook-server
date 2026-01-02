@@ -1,18 +1,17 @@
-import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
 import apiRouter from './routes/routes';
-
+import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import morgan from 'morgan';
+import { env } from './common/config';
 import {
     globalErrorHandler,
     handleUncaughtException,
     handleUnhandledRejection,
     notFoundHandler,
 } from './common/errors';
-import { config } from './common/utils/config';
 
 dotenv.config();
 
@@ -29,12 +28,12 @@ app.use(
     })
 );
 // Morgan logging format based on environment
-const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+const morganFormat = env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat));
 
 app.use(
     cors({
-        origin: [config.clientUrl],
+        origin: [env.CLIENT_URL],
         credentials: true,
     })
 );

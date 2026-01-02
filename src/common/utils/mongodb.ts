@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { config } from './config';
+import { env } from '../config';
 
 let isConnected = false;
 
@@ -13,7 +13,7 @@ export const connectToMongo = async (): Promise<void> => {
         return;
     }
 
-    if (!config.mongodbUri) {
+    if (!env.MONGODB_URI) {
         throw new Error('MongoDB URI is not defined in environment variables');
     }
 
@@ -21,7 +21,7 @@ export const connectToMongo = async (): Promise<void> => {
         // Configure mongoose
         mongoose.set('strictQuery', true);
 
-        await mongoose.connect(config.mongodbUri, {
+        await mongoose.connect(env.MONGODB_URI, {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,

@@ -1,5 +1,6 @@
 import { createTransporter } from './mailer';
 import { getOtpEmailHtml } from '../emails/templates';
+import { env } from '../config';
 
 export enum EMailType {
     REGISTER = 'register',
@@ -21,7 +22,7 @@ export async function sendOtpEmail(
     const html = getOtpEmailHtml(otp, type);
 
     const mailOptions = {
-        from: `"Handbook" <${process.env.GMAIL_USER}>`,
+        from: `"Handbook" <${env.GMAIL_USER}>`,
         to,
         subject,
         html,

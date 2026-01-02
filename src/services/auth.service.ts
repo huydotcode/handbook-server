@@ -2,16 +2,17 @@ import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { google } from 'googleapis';
 
+import { env } from '../common/config';
 import {
     NotFoundError,
     UnauthorizedError,
     ValidationError,
 } from '../common/errors';
-import { EAuthType } from '../models/user.model';
 import { jwt } from '../common/utils';
 import { EMailType, sendOtpEmail } from '../common/utils/mail';
 import redis from '../common/utils/redis';
 import Profile from '../models/profile.model';
+import { EAuthType } from '../models/user.model';
 import { UserRepository } from '../repositories';
 
 export interface LoginResult {
@@ -338,8 +339,8 @@ export class AuthService {
      */
     async loginWithGoogle(code: string): Promise<LoginResult> {
         const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
+            env.GOOGLE_CLIENT_ID,
+            env.GOOGLE_CLIENT_SECRET,
             'postmessage'
         );
 

@@ -3,6 +3,7 @@ import {
     ServiceUnavailableError,
     ValidationError,
 } from '../common/errors/app.error';
+import { env } from '../common/config';
 
 interface AIHistoryPart {
     text: string;
@@ -21,7 +22,7 @@ export class AIService {
     private history: AIHistoryItem[];
 
     constructor() {
-        const apiKey = process.env.AI_API_KEY;
+        const apiKey = env.AI_API_KEY;
         if (!apiKey) {
             throw new ServiceUnavailableError(
                 'GOOGLE_API_KEY is not configured'
@@ -29,7 +30,7 @@ export class AIService {
         }
 
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.AI_MODEL || 'gemini-2.0-flash-lite';
+        this.modelName = env.AI_MODEL || 'gemini-2.0-flash-lite';
         this.history = [
             {
                 role: 'user',
