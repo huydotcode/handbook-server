@@ -3,6 +3,8 @@ import { EApiMethod, IApiRoute } from '../types/route.type';
 import authMiddleware from '../../middlewares/auth.middleware';
 import limiteMiddleware from '../../middlewares/limite.middleware';
 import adminMiddleware from '../../middlewares/admin.middleware';
+import validateRequest from '../middleware/validateRequest';
+import catchAsync from './catch-async';
 
 const methodMap: Record<EApiMethod, keyof Router> = {
     [EApiMethod.GET]: 'get',
@@ -31,6 +33,10 @@ export function addRoute(router: Router, route: IApiRoute): Router {
         middlewares.push(adminMiddleware);
     }
 
+    if (route.validate) {
+        middlewares.push(validateRequest(route.validate));
+    }
+
     if (route.middlewares) {
         if (Array.isArray(route.middlewares)) {
             middlewares.push(...route.middlewares);
@@ -42,7 +48,7 @@ export function addRoute(router: Router, route: IApiRoute): Router {
     (router as any)[method](
         route.path,
         ...middlewares,
-        route.controller as unknown as RequestHandler
+        catchAsync(route.controller as unknown as RequestHandler)
     );
     return router;
 }
