@@ -13,7 +13,7 @@ export class UserRepository extends BaseRepository<IUserModel> {
      * @returns User document
      */
     async findByEmail(email: string) {
-        return await this.model.findOne({ email: email.toLowerCase() }).lean();
+        return await this.model.findOne({ email: email.toLowerCase() });
     }
 
     /**
@@ -22,14 +22,12 @@ export class UserRepository extends BaseRepository<IUserModel> {
      * @returns User document
      */
     async findByEmailOrUsername(value: string) {
-        return await this.model
-            .findOne({
-                $or: [
-                    { email: value.toLowerCase() },
-                    { username: value.toLowerCase() },
-                ],
-            })
-            .lean();
+        return await this.model.findOne({
+            $or: [
+                { email: value.toLowerCase() },
+                { username: value.toLowerCase() },
+            ],
+        });
     }
 
     /**

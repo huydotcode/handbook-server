@@ -56,3 +56,9 @@ export const resetPasswordValidation = z
     });
 
 export type ResetPasswordValidation = z.infer<typeof resetPasswordValidation>;
+
+export const googleLoginValidation = z.object({
+    code: z.string().min(1, 'Authorization code is required'),
+});
+
+export type GoogleLoginValidation = z.infer<typeof googleLoginValidation>;

@@ -6,6 +6,7 @@ import {
     loginValidation,
     resetPasswordValidation,
     signUpValidation,
+    googleLoginValidation,
 } from '../validations/auth.validation';
 
 const authRouter = Router();
@@ -55,6 +56,14 @@ const authRoutes: IApiRoute[] = [
         controller: authController.resetPassword,
         validate: {
             body: resetPasswordValidation,
+        },
+    },
+    {
+        path: '/google',
+        method: EApiMethod.POST,
+        controller: authController.loginWithGoogle,
+        validate: {
+            body: googleLoginValidation,
         },
     },
 ];

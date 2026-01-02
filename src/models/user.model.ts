@@ -16,6 +16,8 @@ export interface IUserModel extends Document {
     name: string;
     avatar: string;
     role: EUserRole;
+    authType: EAuthType;
+    googleId?: string;
     givenName: string;
     familyName: string;
     locale: string;
@@ -36,6 +38,8 @@ export interface IUserInput {
     name: string;
     avatar: string;
     role: EUserRole;
+    authType?: EAuthType;
+    googleId?: string;
 }
 
 export interface IUserOutput extends IUserInput {
@@ -49,6 +53,11 @@ export enum EUserRole {
     USER = 'user',
 }
 
+export enum EAuthType {
+    LOCAL = 'local',
+    GOOGLE = 'google',
+}
+
 const UserSchema = new Schema<IUserModel>(
     {
         email: {
@@ -59,6 +68,7 @@ const UserSchema = new Schema<IUserModel>(
         username: {
             type: String,
             unique: true,
+            sparse: true,
         },
         name: {
             type: String,
@@ -72,6 +82,16 @@ const UserSchema = new Schema<IUserModel>(
             type: String,
             enum: Object.values(EUserRole),
             default: EUserRole.USER,
+        },
+        authType: {
+            type: String,
+            enum: Object.values(EAuthType),
+            default: EAuthType.LOCAL,
+        },
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true,
         },
         isOnline: {
             type: Boolean,

@@ -1,11 +1,13 @@
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { google } from 'googleapis';
 
 import {
     NotFoundError,
     UnauthorizedError,
     ValidationError,
 } from '../common/errors';
+import { EAuthType } from '../models/user.model';
 import { jwt } from '../common/utils';
 import { EMailType, sendOtpEmail } from '../common/utils/mail';
 import redis from '../common/utils/redis';
@@ -326,6 +328,105 @@ export class AuthService {
                 name: user.name,
                 username: user.username,
                 avatar: user.avatar,
+            },
+        };
+    }
+
+    /**
+     * Login with Google
+     * @param code - Authorization code from Google
+     */
+    async loginWithGoogle(code: string): Promise<LoginResult> {
+        const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            'postmessage'
+        );
+
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+
+        const oauth2 = google.oauth2({
+            auth: oauth2Client,
+            version: 'v2',
+        });
+
+        const { data } = await oauth2.userinfo.get();
+
+        if (!data.email || !data.id) {
+            throw new ValidationError('Không thể lấy thông tin từ Google');
+        }
+
+        let user = await this.userRepository.findByEmail(data.email);
+
+        if (!user) {
+            // Create new user
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+            let username = data.email.split('@')[0];
+
+            // Check if username exists
+            const existingUsername = await this.userRepository.findOne({
+                username,
+            });
+
+            if (existingUsername) {
+                username += Math.floor(Math.random() * 1000);
+            }
+
+            user = (await this.userRepository.create({
+                email: data.email,
+                name: data.name || 'User',
+                username: username,
+                password: hashedPassword,
+                avatar: data.picture || '/assets/img/user-profile.jpg',
+                authType: EAuthType.GOOGLE,
+                googleId: data.id,
+                isVerified: true,
+            })) as any;
+
+            if (user) {
+                await Profile.create({
+                    user: user._id,
+                    coverPhoto: '/assets/img/cover-page.jpg',
+                    bio: '',
+                    work: '',
+                    education: '',
+                    location: '',
+                    dateOfBirth: new Date(),
+                });
+            }
+        } else {
+            if (!user.googleId) {
+                user.googleId = data.id;
+                user.authType = EAuthType.GOOGLE;
+                await user.save();
+            }
+        }
+
+        const accessToken = jwt.sign({
+            id: user!._id.toString(),
+            email: user!.email,
+            name: user!.name,
+            picture: user!.avatar,
+            role: user!.role,
+            username: user!.username || '',
+        });
+
+        const refreshToken = jwt.signRefreshToken({
+            id: user!._id.toString(),
+        });
+
+        return {
+            accessToken,
+            refreshToken,
+            user: {
+                id: user!._id.toString(),
+                email: user!.email,
+                name: user!.name,
+                avatar: user!.avatar,
+                role: user!.role,
+                username: user!.username || '',
             },
         };
     }

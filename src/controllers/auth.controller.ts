@@ -162,4 +162,37 @@ export class AuthController {
             next(error);
         }
     };
+
+    /**
+     * Login with Google
+     * POST /api/v1/auth/google
+     */
+    public loginWithGoogle = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { code } = req.body;
+
+            const result = await authService.loginWithGoogle(code);
+
+            // Set refresh token in httpOnly cookie
+            res.cookie('refreshToken', result.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite:
+                    process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+
+            ResponseUtil.success(
+                res,
+                { accessToken: result.accessToken, user: result.user },
+                'Đăng nhập Google thành công'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
 }
