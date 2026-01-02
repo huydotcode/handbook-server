@@ -70,16 +70,22 @@ export class AuthService {
         const user = await this.userRepository.findByEmail(email.toLowerCase());
 
         if (!user) {
-            throw new NotFoundError('Đăng nhập thất bại');
+            throw new NotFoundError(
+                'Tài khoản hoặc mật khẩu của bạn không chính xác'
+            );
         }
 
         if (!user.password || !password) {
-            throw new UnauthorizedError('Đăng nhập thất bại');
+            throw new UnauthorizedError(
+                'Tài khoản hoặc mật khẩu của bạn không chính xác'
+            );
         }
 
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
-            throw new UnauthorizedError('Đăng nhập thất bại');
+            throw new UnauthorizedError(
+                'Tài khoản hoặc mật khẩu của bạn không chính xác'
+            );
         }
 
         const accessToken = jwt.sign({
