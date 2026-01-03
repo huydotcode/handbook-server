@@ -113,9 +113,9 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { email } = req.body;
+            const { email, type } = req.body;
 
-            const result = await authService.sendOTP(email);
+            const result = await authService.sendOTP(email, type);
 
             ResponseUtil.success(res, result, result.message);
         } catch (error) {
@@ -153,9 +153,13 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { email, newPassword } = req.body;
+            const { email, newPassword, otp } = req.body;
 
-            const result = await authService.resetPassword(email, newPassword);
+            const result = await authService.resetPassword(
+                email,
+                newPassword,
+                otp
+            );
 
             ResponseUtil.success(res, result, result.message);
         } catch (error) {

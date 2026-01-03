@@ -164,14 +164,20 @@ export class AuthService {
      * @throws ValidationError if email is not provided
      * @throws NotFoundError if user not found
      */
-    async sendOTP(email: string): Promise<SendOTPResult> {
+    async sendOTP(email: string, type: EMailType): Promise<SendOTPResult> {
         if (!email) {
             throw new ValidationError('Vui lòng cung cấp email');
         }
 
         const user = await this.userRepository.findByEmail(email.toLowerCase());
 
-        if (!user) {
+        // Nếu là đăng ký, email chưa được tồn tại
+        if (type === EMailType.REGISTER && user) {
+            throw new ValidationError('Email đã được sử dụng');
+        }
+
+        // Nếu là quên mật khẩu, email phải tồn tại
+        if (type === EMailType.FORGOT_PASSWORD && !user) {
             throw new NotFoundError('Tài khoản không tồn tại');
         }
 
@@ -191,7 +197,7 @@ export class AuthService {
             expiresIn
         );
 
-        await sendOtpEmail(email, otp, EMailType.REGISTER);
+        await sendOtpEmail(email, otp, type);
 
         return {
             message: 'OTP đã được gửi tới email của bạn',
@@ -227,9 +233,6 @@ export class AuthService {
             throw new ValidationError('OTP không chính xác');
         }
 
-        // Delete OTP after successful verification
-        await redis.del(`otp:${email.toLowerCase()}`);
-
         return {
             message: 'Xác thực OTP thành công',
         };
@@ -245,16 +248,35 @@ export class AuthService {
      */
     async resetPassword(
         email: string,
-        newPassword: string
+        newPassword: string,
+        otp: string
     ): Promise<{ message: string }> {
-        if (!email || !newPassword) {
+        if (!email || !newPassword || !otp) {
             throw new ValidationError(
-                'Vui lòng cung cấp email và mật khẩu mới'
+                'Vui lòng cung cấp email, mật khẩu mới và OTP'
             );
         }
 
         if (newPassword.length < 6) {
             throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
+        }
+
+        // Verify OTP
+        const otpData = await redis.get(`otp:${email.toLowerCase()}`);
+
+        if (!otpData) {
+            throw new ValidationError('OTP không hợp lệ hoặc đã hết hạn');
+        }
+
+        const { otp: storedOtp, expires } = JSON.parse(otpData);
+
+        if (Date.now() > expires) {
+            await redis.del(`otp:${email.toLowerCase()}`);
+            throw new ValidationError('OTP đã hết hạn');
+        }
+
+        if (storedOtp !== otp) {
+            throw new ValidationError('OTP không chính xác');
         }
 
         const user = await this.userRepository.findByEmail(email.toLowerCase());
@@ -267,6 +289,9 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedPassword;
         await user.save();
+
+        // Delete OTP after successful reset
+        await redis.del(`otp:${email.toLowerCase()}`);
 
         return {
             message: 'Mật khẩu đã được cập nhật thành công',

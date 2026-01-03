@@ -7,6 +7,7 @@ import {
     resetPasswordValidation,
     signUpValidation,
     googleLoginValidation,
+    sendOtpValidation,
 } from '../validations/auth.validation';
 
 const authRouter = Router();
@@ -44,6 +45,9 @@ const authRoutes: IApiRoute[] = [
         path: '/send-otp',
         method: EApiMethod.POST,
         controller: authController.sendOTP,
+        validate: {
+            body: sendOtpValidation,
+        },
     },
     {
         path: '/verify-otp',

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EMailType } from '../common/utils/mail';
 
 // Sign up validation
 export const signUpValidation = z.object({
@@ -43,19 +44,21 @@ export const loginValidation = z.object({
 
 export type LoginValidation = z.infer<typeof loginValidation>;
 
-export const resetPasswordValidation = z
-    .object({
-        email: z.string().email('Email không hợp lệ'),
-        password: z.string().min(6, 'Mật khẩu từ 6-50 kí tự'),
-        repassword: z.string().min(6, 'Mật khẩu từ 6-50 kí tự'),
-        otp: z.string().min(6, 'OTP phải có 6 chữ số'),
-    })
-    .refine((data) => data.password === data.repassword, {
-        message: 'Mật khẩu và xác nhận mật khẩu không khớp',
-        path: ['repassword'],
-    });
+export const resetPasswordValidation = z.object({
+    email: z.string().email('Email không hợp lệ'),
+    newPassword: z.string().min(6, 'Mật khẩu từ 6-50 kí tự'),
+    otp: z.string().min(6, 'OTP phải có 6 chữ số'),
+});
 
 export type ResetPasswordValidation = z.infer<typeof resetPasswordValidation>;
+
+// Send OTP validation
+export const sendOtpValidation = z.object({
+    email: z.string().email('Email không hợp lệ'),
+    type: z.enum(Object.values(EMailType)),
+});
+
+export type SendOtpValidation = z.infer<typeof sendOtpValidation>;
 
 export const googleLoginValidation = z.object({
     code: z.string().min(1, 'Authorization code is required'),
