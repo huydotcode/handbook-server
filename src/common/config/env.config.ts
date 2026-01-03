@@ -46,6 +46,10 @@ const envSchema = z.object({
     // AI
     AI_API_KEY: z.string(),
     AI_MODEL: z.string().default('gemini-2.0-flash-lite'),
+
+    // Resend
+    RESEND_API_KEY: z.string(),
+    RESEND_FROM_EMAIL: z.string().default('onboarding@resend.dev'),
 });
 
 // Process env validation
@@ -91,6 +95,10 @@ const envProcess = envSchema.safeParse({
     // AI
     AI_API_KEY: process.env.AI_API_KEY,
     AI_MODEL: process.env.AI_MODEL,
+
+    // Resend
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
 });
 
 if (!envProcess.success) {
