@@ -1,16 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
-import { PostService, PostInteractionService } from '../services';
-import { ResponseUtil } from '../common/utils/response';
 import {
-    getPaginationParams,
     getAuthenticatedUserId,
     getOptionalUserId,
+    getPaginationParams,
     validateRequiredParam,
-    validateRequiredBodyField,
 } from '../common/utils/controller.helper';
-import { UnauthorizedError } from '../common/errors/app.error';
-import { EPostStatus } from '../models/post.model';
+import { ResponseUtil } from '../common/utils/response';
 import { EPostInteractionType } from '../models/post-interaction.model';
+import { EPostStatus } from '../models/post.model';
+import { PostInteractionService, PostService } from '../services';
 
 /**
  * Controller for post-related HTTP handlers.
@@ -36,10 +34,9 @@ export class PostController {
         try {
             const postData = req.body;
             const userId = getAuthenticatedUserId(req);
-            validateRequiredBodyField(postData, 'author');
 
             const newPost = await this.postService.createPost(
-                { ...postData, author: postData.author },
+                { ...postData, author: userId },
                 userId
             );
             ResponseUtil.created(res, newPost, 'Post created successfully');
