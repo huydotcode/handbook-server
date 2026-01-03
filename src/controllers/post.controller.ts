@@ -7,8 +7,12 @@ import {
 } from '../common/utils/controller.helper';
 import { ResponseUtil } from '../common/utils/response';
 import { EPostInteractionType } from '../models/post-interaction.model';
-import { EPostStatus } from '../models/post.model';
-import { PostInteractionService, PostService } from '../services';
+import { EPostOption, EPostStatus } from '../models/post.model';
+import {
+    FriendshipService,
+    PostInteractionService,
+    PostService,
+} from '../services';
 
 /**
  * Controller for post-related HTTP handlers.
@@ -16,10 +20,12 @@ import { PostInteractionService, PostService } from '../services';
 export class PostController {
     private postService: PostService;
     private postInteractionService: PostInteractionService;
+    private friendshipService: FriendshipService;
 
     constructor() {
         this.postService = new PostService();
         this.postInteractionService = new PostInteractionService();
+        this.friendshipService = new FriendshipService();
     }
 
     /**
@@ -182,14 +188,33 @@ export class PostController {
         try {
             const userId = req.params.userId;
             validateRequiredParam(userId, 'User ID');
-            const authenticatedUserId = getOptionalUserId(req) || userId;
+            const authenticatedUserId = getAuthenticatedUserId(req);
+            const isUserAuthenticated = authenticatedUserId === userId;
             const { page, pageSize } = getPaginationParams(req, 3);
+
+            const isFriend = await this.friendshipService.areFriends(
+                authenticatedUserId,
+                userId
+            );
 
             const result = await this.postService.getPostsWithInteraction(
                 {
                     author: userId,
                     group: null,
                     status: EPostStatus.ACTIVE,
+                    option: isUserAuthenticated
+                        ? {
+                              $in: [
+                                  EPostOption.PUBLIC,
+                                  EPostOption.FRIEND,
+                                  EPostOption.PRIVATE,
+                              ],
+                          }
+                        : isFriend
+                        ? {
+                              $in: [EPostOption.PUBLIC, EPostOption.FRIEND],
+                          }
+                        : EPostOption.PUBLIC,
                 },
                 authenticatedUserId,
                 page,
