@@ -44,6 +44,12 @@ export enum EPostType {
     GROUP = 'group',
 }
 
+export enum EPostOption {
+    PUBLIC = 'public',
+    PRIVATE = 'private',
+    FRIEND = 'friend',
+}
+
 export enum EPostStatus {
     ACTIVE = 'active',
     PENDING = 'pending',
@@ -54,7 +60,8 @@ const PostSchema = new Schema<IPostModel>(
     {
         option: {
             type: String,
-            default: 'public',
+            default: EPostOption.PUBLIC,
+            enum: Object.values(EPostOption),
         },
         text: {
             type: String,
