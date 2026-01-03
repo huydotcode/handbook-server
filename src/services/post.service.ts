@@ -515,6 +515,17 @@ export class PostService extends BaseService<IPostModel> {
      */
     async deletePost(postId: string, userId: string): Promise<void> {
         this.validateId(postId, 'Post ID');
+
+        const post = await this.getById(postId);
+        if (!post) {
+            throw new Error('Post not found');
+        }
+
+        const isUserAuthenticated = userId === post.author.toString();
+        if (!isUserAuthenticated) {
+            throw new Error('You are not authorized to delete this post');
+        }
+
         await this.delete(postId, userId);
     }
 }
