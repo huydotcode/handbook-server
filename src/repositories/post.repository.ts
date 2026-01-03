@@ -133,6 +133,7 @@ export class PostRepository extends BaseRepository<IPostModel> {
             commentsCount: post.commentsCount,
             lovesCount: post.lovesCount,
             sharesCount: post.sharesCount,
+            tags: post.tags,
             userHasLoved: interactionMap
                 .get(post._id.toString())
                 ?.has(EPostInteractionType.LOVE)
