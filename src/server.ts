@@ -5,6 +5,8 @@ import {
     disconnectFromMongo,
     isMongoConnected,
 } from './common/utils/mongodb';
+import redis from './common/utils/redis';
+import { redisPubSubService } from './services/redis-pubsub.service';
 
 let server: ReturnType<typeof app.listen> | null = null;
 
@@ -66,6 +68,29 @@ const shutdown = async (signal: string): Promise<void> => {
                 if (isMongoConnected()) {
                     await disconnectFromMongo();
                 }
+
+                // Disconnect from Redis
+                try {
+                    await redis.quit();
+                    console.log('Redis client disconnected');
+                } catch (redisError) {
+                    console.warn(
+                        'Redis client disconnect warning:',
+                        redisError
+                    );
+                }
+
+                // Disconnect from Redis Pub/Sub
+                try {
+                    await redisPubSubService.disconnect();
+                    console.log('Redis Pub/Sub disconnected');
+                } catch (pubsubError) {
+                    console.warn(
+                        'Redis Pub/Sub disconnect warning:',
+                        pubsubError
+                    );
+                }
+
                 console.log('Graceful shutdown completed');
                 process.exit(0);
             } catch (error) {

@@ -8,7 +8,25 @@ class RedisPubSubService {
     constructor() {
         const redisUrl = env.REDIS_URL;
 
-        this.publisher = new Redis(redisUrl);
+        this.publisher = new Redis(redisUrl, {
+            // Connection pooling settings
+            maxRetriesPerRequest: null,
+            retryStrategy: (times) => {
+                const delay = Math.min(times * 50, 2000);
+                return delay;
+            },
+            reconnectOnError: (err) => {
+                const targetError = 'READONLY';
+                if (err.message.includes(targetError)) {
+                    return true;
+                }
+                return false;
+            },
+            // Keep-alive settings
+            keepAlive: 30000,
+            enableReadyCheck: true,
+            enableOfflineQueue: true,
+        });
         this.setupEventHandlers();
     }
 
