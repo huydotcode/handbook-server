@@ -1,421 +1,577 @@
 import { NextFunction, Request, Response } from 'express';
-import { Types } from 'mongoose';
-import Follows from '../models/follow.model';
-import Post from '../models/post.model';
-import PostInteraction from '../models/post_interaction.model';
-import User from '../models/user.model';
-import { getPostsWithInteraction } from '../services/post.service';
-import { IPost } from '../types';
-import { getDecodedTokenFromHeaders } from '../utils/jwt';
-import { POPULATE_GROUP, POPULATE_USER } from '../utils/populate';
+import {
+    getAuthenticatedUserId,
+    getOptionalUserId,
+    getPaginationParams,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
+import { ResponseUtil } from '../common/utils/response';
+import { EPostInteractionType } from '../models/post-interaction.model';
+import { EPostOption, EPostStatus } from '../models/post.model';
+import {
+    FriendshipService,
+    PostInteractionService,
+    PostService,
+} from '../services';
 
-class PostController {
-    // ROUTE: POST /api/posts
-    public async createPost(
+/**
+ * Controller for post-related HTTP handlers.
+ */
+export class PostController {
+    private postService: PostService;
+    private postInteractionService: PostInteractionService;
+    private friendshipService: FriendshipService;
+
+    constructor() {
+        this.postService = new PostService();
+        this.postInteractionService = new PostInteractionService();
+        this.friendshipService = new FriendshipService();
+    }
+
+    /**
+     * POST /api/posts
+     * Create a new post.
+     */
+    public createPost = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
             const postData = req.body;
-            const newPost = new Post(postData);
-            await newPost.save();
-            res.status(201).json(newPost);
+            const userId = getAuthenticatedUserId(req);
+
+            const newPost = await this.postService.createPost(
+                { ...postData, author: userId },
+                userId
+            );
+            ResponseUtil.created(res, newPost, 'Post created successfully');
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/posts
-    public async getAllPosts(
+    /**
+     * GET /api/posts
+     * Get all posts.
+     */
+    public getAllPosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const posts = await Post.find();
-            res.status(200).json(posts);
+            const posts = await this.postService.getAllPosts();
+            ResponseUtil.success(res, posts, 'Posts retrieved successfully');
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/posts/:id
-    public async getPostById(
+    /**
+     * GET /api/posts/:id
+     * Get a post by ID with interaction flags.
+     */
+    public getPostById = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-            if (!token) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getOptionalUserId(req) || postId; // Fallback to postId if not authenticated
 
-            const post = await Post.findOne({
-                _id: new Types.ObjectId(req.params.id),
-            })
-                .populate('media')
-                .populate('author', POPULATE_USER)
-                .populate(POPULATE_GROUP)
-                .lean<IPost>();
-
-            if (!post) {
-                res.status(404).json({ message: 'Post not found' });
-                return;
-            }
-
-            const interactions = await PostInteraction.find({
-                post: post._id,
-                user: token.id,
-                type: { $in: ['love', 'share', 'save'] },
-            }).lean();
-
-            const isLoved = interactions.some((i) => i.type === 'love');
-            const isShared = interactions.some((i) => i.type === 'share');
-            const isSaved = interactions.some((i) => i.type === 'save');
-
-            post.userHasLoved = isLoved;
-            post.userHasShared = isShared;
-            post.userHasSaved = isSaved;
-
-            res.status(200).json(post);
+            const post = await this.postService.getPostById(postId, userId);
+            ResponseUtil.success(res, post, 'Post retrieved successfully');
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/v1/posts/new-feed
-    public async getNewFeedPosts(
+    /**
+     * GET /api/v1/posts/new-feed
+     * Get new feed posts (from followings and friends).
+     */
+    public getNewFeedPosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const user_id = req.query.user_id as string;
-            const user = await User.findById(user_id).populate(POPULATE_USER);
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
-            const followings = await Follows.find({
-                follower: user_id,
-            })
-                .select('following')
-                .lean();
-
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    $or: [
-                        {
-                            author: {
-                                $in: followings.map((f) => f.following),
-                            },
-                            option: 'public',
-                        },
-                        {
-                            author: {
-                                $in: user?.friends,
-                            },
-                            option: {
-                                $in: ['friends', 'public'],
-                            },
-                        },
-                    ],
-                },
-                userId: user_id,
+            const result = await this.postService.getNewFeedPosts(
+                userId,
                 page,
-                pageSize: page_size,
-            });
-
-            res.status(200).json(posts);
+                pageSize
+            );
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'New feed posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/v1/posts/new-feed-friend
-    public async getNewFeedFriendPosts(
+    /**
+     * GET /api/v1/posts/new-feed-friend
+     * Get new feed posts from friends only.
+     */
+    public getNewFeedFriendPosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const user_id = req.query.user_id as string;
-            const user = await User.findById(user_id).populate(POPULATE_USER);
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    author: {
-                        $in: user?.friends,
-                    },
-                },
-                userId: user_id,
+            const result = await this.postService.getNewFeedFriendPosts(
+                userId,
                 page,
-                pageSize: page_size,
-            });
-
-            res.status(200).json(posts);
+                pageSize
+            );
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Friend feed posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/v1/posts/new-feed-group
-    public async getNewFeedGroupPosts(
+    /**
+     * GET /api/v1/posts/new-feed-group
+     * Get new feed posts from groups.
+     */
+    public getNewFeedGroupPosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const user_id = req.query.user_id as string;
-            const user = await User.findById(user_id).populate(POPULATE_USER);
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 3);
 
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    group: {
-                        $in: user?.groups,
-                    },
-                    status: 'active',
-                },
-                userId: user_id,
+            const result = await this.postService.getNewFeedGroupPosts(
+                userId,
                 page,
-                pageSize: page_size,
-            });
-
-            res.status(200).json(posts);
+                pageSize
+            );
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Group feed posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/v1/posts/profile/:user_id
-    public async getProfilePosts(
+    /**
+     * GET /api/v1/posts/profile/:userId
+     * Get profile posts for a specific user.
+     */
+    public getProfilePosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const user_id = req.params.user_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
+            const userId = req.params.userId;
+            validateRequiredParam(userId, 'User ID');
+            const authenticatedUserId = getAuthenticatedUserId(req);
+            const isUserAuthenticated = authenticatedUserId === userId;
+            const { page, pageSize } = getPaginationParams(req, 3);
 
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    author: user_id,
+            const isFriend = await this.friendshipService.areFriends(
+                authenticatedUserId,
+                userId
+            );
+
+            const result = await this.postService.getPostsWithInteraction(
+                {
+                    author: userId,
                     group: null,
-                    status: 'active',
+                    status: EPostStatus.ACTIVE,
+                    option: isUserAuthenticated
+                        ? {
+                              $in: [
+                                  EPostOption.PUBLIC,
+                                  EPostOption.FRIEND,
+                                  EPostOption.PRIVATE,
+                              ],
+                          }
+                        : isFriend
+                        ? {
+                              $in: [EPostOption.PUBLIC, EPostOption.FRIEND],
+                          }
+                        : EPostOption.PUBLIC,
                 },
-                userId: user_id,
+                authenticatedUserId,
                 page,
-                pageSize: page_size,
-            });
+                pageSize
+            );
 
-            res.status(200).json(posts);
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Profile posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
+    };
 
-    // ROUTE: GET /api/v1/posts/group/:group_id
-    public async getGroupPosts(
+    /**
+     * GET /api/v1/posts/group/:groupId
+     * Get posts for a specific group.
+     */
+    public getGroupPosts = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const group_id = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
-            const token = await getDecodedTokenFromHeaders(req.headers);
+            const userId = getAuthenticatedUserId(req);
+            const groupId = req.params.groupId;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
 
-            if (!token) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    group: group_id,
-                    status: 'active',
-                },
-                userId: token.id,
-                page,
-                pageSize: page_size,
-            });
-
-            res.status(200).json(posts);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    // ROUTE: POST /api/v1/posts/group/:group_id/manage
-    public async getManageGroupPosts(
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> {
-        try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-
-            if (!token) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-
-            const group_id = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
-
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    group: group_id,
-                    status: 'active',
-                },
-                userId: token.id,
-                page,
-                pageSize: page_size,
-            });
-
-            res.status(200).json(posts);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    // ROUTE: POST /api/v1/posts/group/:group_id/manage
-    public async getManageGroupPostsPending(
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> {
-        try {
-            const group_id = req.params.group_id;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
-            const token = await getDecodedTokenFromHeaders(req.headers);
-
-            if (!token) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-
-            const posts = await Post.find({
-                group: group_id,
-                status: 'pending',
-            })
-                .populate('media')
-                .populate('author', POPULATE_USER)
-                .populate(POPULATE_GROUP)
-                .sort({ createdAt: -1, loves: -1 })
-                .skip((page - 1) * page_size)
-                .limit(page_size);
-
-            res.status(200).json(posts);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    public async getPostByMember(
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> {
-        try {
-            const { user_id, group_id } = req.query;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
-            const userId = user_id as string;
-
-            const posts = await getPostsWithInteraction({
-                filter: {
-                    author: user_id,
-                    group: group_id,
-                    status: 'active',
+            const result = await this.postService.getPostsWithInteraction(
+                {
+                    group: groupId,
+                    status: EPostStatus.ACTIVE,
                 },
                 userId,
                 page,
-                pageSize: page_size,
-            });
+                pageSize
+            );
 
-            res.status(200).json(posts);
-        } catch (e) {
-            next(e);
-        }
-    }
-
-    // ROUTE: GET /api/v1/posts/saved
-    public async getSavedPosts(
-        req: Request,
-        res: Response,
-        next: NextFunction
-    ): Promise<void> {
-        try {
-            const token = await getDecodedTokenFromHeaders(req.headers);
-            if (!token) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-            const user_id = token.id;
-            const page = parseInt(req.query.page as string) || 1;
-            const page_size = parseInt(req.query.page_size as string) || 3;
-
-            const posts = await PostInteraction.find({
-                user: user_id,
-                type: 'save',
-            })
-                .populate('post')
-                .sort({ createdAt: -1 })
-                .skip((page - 1) * page_size)
-                .limit(page_size);
-
-            // populate posts
-            const postIds = posts.map((interaction) => interaction.post._id);
-            const populatedPosts = await Post.find({
-                _id: { $in: postIds },
-            })
-                .populate('media')
-                .populate('author', POPULATE_USER)
-                .populate(POPULATE_GROUP)
-                .lean<IPost[]>();
-
-            // Gắn thông tin tương tác vào từng post
-            const interactionMap = new Map();
-            posts.forEach((interaction) => {
-                const postId = interaction.post._id.toString();
-                interactionMap.set(postId, {
-                    love: false,
-                    share: false,
-                    save: true,
-                });
-                console.log('interactionMap', interactionMap);
-                console.log('postId', postId);
-            });
-            populatedPosts.forEach((post) => {
-                const postId = post._id.toString();
-                if (interactionMap.has(postId)) {
-                    const interaction = interactionMap.get(postId);
-                    post.userHasLoved = interaction.love;
-                    post.userHasShared = interaction.share;
-                    post.userHasSaved = interaction.save;
-                } else {
-                    post.userHasLoved = false;
-                    post.userHasShared = false;
-                    post.userHasSaved = false;
-                }
-            });
-
-            res.status(200).json(populatedPosts);
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Group posts retrieved successfully'
+            );
         } catch (error) {
             next(error);
         }
-    }
-}
+    };
 
-export default new PostController();
+    /**
+     * GET /api/v1/posts/group/:groupId/manage
+     * Get manage group posts (active status).
+     */
+    public getManageGroupPosts = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const groupId = req.params.groupId;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
+
+            const result = await this.postService.getPostsWithInteraction(
+                {
+                    group: groupId,
+                    status: EPostStatus.ACTIVE,
+                },
+                userId,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Manage group posts retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/posts/group/:groupId/manage/pending
+     * Get manage group posts (pending status).
+     */
+    public getManageGroupPostsPending = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const groupId = req.params.groupId;
+            validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = getPaginationParams(req, 3);
+
+            const result = await this.postService.getPostsWithInteraction(
+                {
+                    group: groupId,
+                    status: EPostStatus.PENDING,
+                },
+                userId,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Pending group posts retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/posts/group/:groupId/member/:userId
+     * Get posts by member in a group.
+     */
+    public getPostByMember = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.userId;
+            const groupId = req.params.groupId;
+            validateRequiredParam(userId, 'User ID');
+            validateRequiredParam(groupId, 'Group ID');
+            const authenticatedUserId = getOptionalUserId(req) || userId;
+            const { page, pageSize } = getPaginationParams(req, 3);
+
+            const result = await this.postService.getPostsWithInteraction(
+                {
+                    author: userId,
+                    group: groupId,
+                    status: EPostStatus.ACTIVE,
+                },
+                authenticatedUserId,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Member posts retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/v1/posts/saved
+     * Get saved posts for the authenticated user.
+     */
+    public getSavedPosts = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = getPaginationParams(req, 10);
+
+            const result = await this.postService.getSavedPosts(
+                userId,
+                page,
+                pageSize
+            );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Saved posts retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/like
+     * Toggle like on a post.
+     */
+    public likePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.LOVE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post liked successfully'
+                    : 'Post unliked successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/share
+     * Toggle share on a post.
+     */
+    public sharePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SHARE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post shared successfully'
+                    : 'Post unshared successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/posts/:id/save
+     * Save a post.
+     */
+    public savePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            const result = await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            ResponseUtil.success(
+                res,
+                result,
+                result.action === 'added'
+                    ? 'Post saved successfully'
+                    : 'Post unsaved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/posts/:id/save
+     * Unsave a post.
+     */
+    public unsavePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+
+            // Check if post is saved
+            const isSaved = await this.postInteractionService.hasUserInteracted(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            if (!isSaved) {
+                ResponseUtil.success(
+                    res,
+                    { success: true },
+                    'Post is not saved'
+                );
+                return;
+            }
+
+            await this.postInteractionService.toggleInteraction(
+                postId,
+                userId,
+                EPostInteractionType.SAVE
+            );
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Post unsaved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/posts/:id
+     * Delete a post by ID.
+     */
+    public deletePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+            await this.postService.deletePost(postId, userId);
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Post deleted successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

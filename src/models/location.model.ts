@@ -1,6 +1,17 @@
-import { Schema, model, models } from 'mongoose';
+import { Document, Schema, model, models } from 'mongoose';
 
-interface ILocationModel {
+export interface ILocationModel extends Document {
+    _id: string;
+    name: string;
+    slug: string;
+    type: string;
+    nameWithType: string;
+    code: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface ILocationInput {
     name: string;
     slug: string;
     type: string;
@@ -8,16 +19,25 @@ interface ILocationModel {
     code: string;
 }
 
-export const LocationSchema = new Schema<ILocationModel>({
-    name: String,
-    slug: String,
-    type: String,
-    nameWithType: String,
-    code: String,
-});
+export interface ILocationOutput extends ILocationInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
-LocationSchema.index({ slug: 1 }, { unique: true }); // Unique index for slug
-LocationSchema.index({ name: 1 }); // Index for name search
+export const LocationSchema = new Schema<ILocationModel>(
+    {
+        name: { type: String, required: true },
+        slug: { type: String, required: true },
+        type: { type: String, required: true },
+        nameWithType: { type: String, required: true },
+        code: { type: String, required: true },
+    },
+    { timestamps: true }
+);
+
+LocationSchema.index({ slug: 1 }, { unique: true });
+LocationSchema.index({ name: 1 });
 
 const Location =
     models.Location || model<ILocationModel>('Location', LocationSchema);

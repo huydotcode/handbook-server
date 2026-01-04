@@ -1,10 +1,52 @@
 import { Router } from 'express';
-import MessageController from '../controllers/message.controller';
+import { MessageController } from '../controllers/message.controller';
+import { EApiMethod, IApiRoute } from '../common/types/route.type';
+import addRoutes from '../common/utils/add-route';
 
 const messageRouter = Router();
+const messageController = new MessageController();
 
-messageRouter.get('/', MessageController.getMessages);
-messageRouter.get('/search', MessageController.search);
-messageRouter.get('/pinned', MessageController.getPinnedMessages);
+const messageRoutes: IApiRoute[] = [
+    // Specific routes first
+    {
+        path: '/conversation/:conversationId/search',
+        method: EApiMethod.GET,
+        controller: messageController.search,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/conversation/:conversationId/pinned',
+        method: EApiMethod.GET,
+        controller: messageController.getPinnedMessages,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/conversation/:conversationId',
+        method: EApiMethod.GET,
+        controller: messageController.getMessages,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: messageController.sendMessage,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: messageController.deleteMessage,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+];
+
+addRoutes(messageRouter, messageRoutes);
 
 export default messageRouter;

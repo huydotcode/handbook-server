@@ -1,6 +1,7 @@
-import mongoose, { Schema, Types, model, models } from 'mongoose';
+import mongoose, { Document, Schema, Types, model, models } from 'mongoose';
 
-export type IPostModel = {
+export interface IPostModel extends Document {
+    _id: string;
     option: string;
     text: string;
     media: Types.ObjectId[];
@@ -12,15 +13,55 @@ export type IPostModel = {
     sharesCount: number;
 
     tags: string[];
-    type: string;
-    status: string;
-};
+    type: EPostType;
+    status: EPostStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface IPostWithInteraction extends IPostModel {
+    userHasLoved: boolean;
+    userHasShared: boolean;
+    userHasSaved: boolean;
+}
+
+export interface IPostInput {
+    option: string;
+    text: string;
+    media: Types.ObjectId[];
+    author: Types.ObjectId;
+    group: Types.ObjectId;
+}
+
+export interface IPostOutput extends IPostInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum EPostType {
+    DEFAULT = 'default',
+    GROUP = 'group',
+}
+
+export enum EPostOption {
+    PUBLIC = 'public',
+    PRIVATE = 'private',
+    FRIEND = 'friend',
+}
+
+export enum EPostStatus {
+    ACTIVE = 'active',
+    PENDING = 'pending',
+    REJECTED = 'rejected',
+}
 
 const PostSchema = new Schema<IPostModel>(
     {
         option: {
             type: String,
-            default: 'public',
+            default: EPostOption.PUBLIC,
+            enum: Object.values(EPostOption),
         },
         text: {
             type: String,
@@ -59,12 +100,13 @@ const PostSchema = new Schema<IPostModel>(
         },
         type: {
             type: String,
-            default: 'default',
-            enum: ['default', 'group'],
+            default: EPostType.DEFAULT,
+            enum: Object.values(EPostType),
         },
         status: {
             type: String,
-            default: 'active',
+            default: EPostStatus.ACTIVE,
+            enum: Object.values(EPostStatus),
         },
     },
     {
@@ -72,11 +114,12 @@ const PostSchema = new Schema<IPostModel>(
     }
 );
 
-PostSchema.index({ group: 1 }); // Index for posts by group
-PostSchema.index({ author: 1 }); // Index for posts by author
-PostSchema.index({ createdAt: -1 }); // Index for posts by date
-PostSchema.index({ text: 'text' }); // Index for posts by text
-PostSchema.index({ tags: 'text' }); // Index for posts by tags
+// Indexes
+PostSchema.index({ group: 1 });
+PostSchema.index({ author: 1 });
+PostSchema.index({ createdAt: -1 });
+PostSchema.index({ text: 'text' });
+PostSchema.index({ tags: 'text' });
 
 const Post = models.Post || model<IPostModel>('Post', PostSchema);
 

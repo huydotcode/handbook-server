@@ -1,147 +1,169 @@
 import { NextFunction, Request, Response } from 'express';
-import Message from '../models/message.model';
-import { POPULATE_USER } from '../utils/populate';
-import { getDecodedTokenFromHeaders } from '../utils/jwt';
-import Conversation from '../models/conversation.model';
+import {
+    getAuthenticatedUserId,
+    getPaginationParams,
+    validateRequiredBodyField,
+    validateRequiredParam,
+} from '../common/utils/controller.helper';
+import { ResponseUtil } from '../common/utils/response';
+import { MessageService } from '../services/message.service';
 
-class MessageController {
-    public async getMessages(req: Request, res: Response): Promise<void> {
-        const conversationId = req.query.conversation_id;
-        const page = req.query.page || 1;
-        const pageSize = req.query.page_size || 10;
+/**
+ * Controller handling HTTP endpoints for messages.
+ */
+export class MessageController {
+    private messageService: MessageService;
 
-        if (!conversationId) {
-            res.status(400).json({ message: 'Conversation ID is required' });
-        }
-
-        try {
-            const user = await getDecodedTokenFromHeaders(req.headers);
-            if (!user) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-
-            const conversation = await Conversation.findOne({
-                _id: conversationId,
-                participants: {
-                    $in: [user.id],
-                },
-            });
-            if (!conversation) {
-                res.status(404).json({ message: 'Conversation not found' });
-                return;
-            }
-
-            const messages = await Message.find({
-                conversation: conversationId,
-            })
-                .skip((+page - 1) * +pageSize)
-                .limit(+pageSize)
-                .populate('sender', POPULATE_USER)
-                .populate('conversation')
-                .populate('media')
-                .populate('readBy.user', POPULATE_USER)
-                .sort({ createdAt: -1 });
-
-            res.status(200).json(messages);
-        } catch (error) {
-            console.log('Error fetching messages:', error);
-            res.status(500).json({ message: 'Internal server error' });
-        }
+    constructor() {
+        this.messageService = new MessageService();
     }
 
-    public async getPinnedMessages(req: Request, res: Response): Promise<void> {
-        const conversationId = req.query.conversation_id;
-        const page = req.query.page || 1;
-        const pageSize = req.query.page_size || 10;
-
-        try {
-            const user = await getDecodedTokenFromHeaders(req.headers);
-            if (!user) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
-
-            if (!conversationId) {
-                res.status(400).json({
-                    message: 'Conversation ID is required',
-                });
-            }
-
-            const conversation = await Conversation.findOne({
-                _id: conversationId,
-                participants: {
-                    $in: [user.id],
-                },
-            });
-            if (!conversation) {
-                res.status(404).json({ message: 'Conversation not found' });
-                return;
-            }
-
-            const messages = await Message.find({
-                conversation: conversationId,
-                isPin: true,
-            })
-                .skip((+page - 1) * +pageSize)
-                .limit(+pageSize)
-                .populate('sender', POPULATE_USER)
-                .populate('conversation')
-                .populate('media')
-                .populate('readBy.user', POPULATE_USER)
-                .sort({ createdAt: -1 });
-
-            res.status(200).json(messages);
-        } catch (error) {
-            res.status(500).json({ message: 'Internal server error' });
-        }
-    }
-
-    public async search(
+    /**
+     * GET /api/messages/conversation/:conversationId
+     * Fetch paginated messages of a conversation.
+     */
+    public getMessages = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
-        const q = req.query.q;
-        const conversationId = req.query.conversation_id;
-
+    ): Promise<void> => {
         try {
-            const user = await getDecodedTokenFromHeaders(req.headers);
-            if (!user) {
-                res.status(401).json({ message: 'Unauthorized' });
-                return;
-            }
+            const userId = getAuthenticatedUserId(req);
+            const conversationId = req.params.conversationId;
+            validateRequiredParam(conversationId, 'Conversation ID');
 
-            const conversation = await Conversation.findOne({
-                _id: conversationId,
-                participants: {
-                    $in: [user.id],
-                },
-            });
+            const { page, pageSize } = getPaginationParams(req, 20);
 
-            if (!conversation) {
-                res.status(404).json({ message: 'Conversation not found' });
-                return;
-            }
+            const result = await this.messageService.getConversationMessages(
+                conversationId,
+                userId,
+                page,
+                pageSize
+            );
 
-            const messages = await Message.find({
-                conversation: conversationId,
-                text: {
-                    $regex: q,
-                    $options: 'i',
-                },
-            })
-                .populate('sender', POPULATE_USER)
-                .populate('conversation')
-                .populate('media')
-                .populate('readBy.user', POPULATE_USER)
-                .sort({ createdAt: -1 });
-
-            res.status(200).json(messages);
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Messages retrieved successfully'
+            );
         } catch (error) {
-            res.status(500).json({ message: 'Internal server error' });
+            next(error);
         }
-    }
-}
+    };
 
-export default new MessageController();
+    /**
+     * GET /api/messages/conversation/:conversationId/pinned
+     * Fetch pinned messages of a conversation.
+     */
+    public getPinnedMessages = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const conversationId = req.params.conversationId;
+            validateRequiredParam(conversationId, 'Conversation ID');
+
+            const { page, pageSize } = getPaginationParams(req, 20);
+
+            const result =
+                await this.messageService.getPinnedConversationMessages(
+                    conversationId,
+                    userId,
+                    page,
+                    pageSize
+                );
+
+            ResponseUtil.paginated(
+                res,
+                result.data,
+                result.pagination,
+                'Pinned messages retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * GET /api/messages/conversation/:conversationId/search
+     * Search conversation messages by keyword.
+     */
+    public search = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const conversationId = req.params.conversationId;
+            validateRequiredParam(conversationId, 'Conversation ID');
+
+            const keyword = (req.query.q as string) || '';
+
+            const messages =
+                await this.messageService.searchConversationMessages(
+                    conversationId,
+                    keyword,
+                    userId
+                );
+
+            ResponseUtil.success(res, messages, 'Messages found successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/v1/messages
+     * Send a new message.
+     */
+    public sendMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = getAuthenticatedUserId(req);
+            const messageData = req.body;
+            validateRequiredBodyField(req.body, 'conversation');
+
+            const message = await this.messageService.createMessage(
+                messageData,
+                userId
+            );
+
+            ResponseUtil.created(res, message, 'Message sent successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/messages/:id
+     * Delete a message (sender only).
+     */
+    public deleteMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const messageId = req.params.id;
+            validateRequiredParam(messageId, 'Message ID');
+            const userId = getAuthenticatedUserId(req);
+
+            await this.messageService.deleteMessage(messageId, userId);
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'Message deleted successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

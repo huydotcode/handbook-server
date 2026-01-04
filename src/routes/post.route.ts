@@ -1,22 +1,130 @@
-import postController from '../controllers/post.controller';
 import { Router } from 'express';
+import { PostController } from '../controllers/post.controller';
+import { EApiMethod, IApiRoute } from '../common/types/route.type';
+import addRoutes from '../common/utils/add-route';
 
 const postRouter = Router();
+const postController = new PostController();
 
-postRouter.get('/', postController.getAllPosts);
-postRouter.post('/', postController.createPost);
-postRouter.get('/new-feed', postController.getNewFeedPosts);
-postRouter.get('/new-feed-group', postController.getNewFeedGroupPosts);
-postRouter.get('/new-feed-friend', postController.getNewFeedFriendPosts);
-postRouter.get('/saved', postController.getSavedPosts);
-postRouter.get('/profile/:user_id', postController.getProfilePosts);
-postRouter.get('/group/member', postController.getPostByMember);
-postRouter.get('/group/manage/:group_id', postController.getManageGroupPosts);
-postRouter.get(
-    '/group/manage/pending/:group_id',
-    postController.getManageGroupPostsPending
-);
-postRouter.get('/group/:group_id', postController.getGroupPosts);
-postRouter.get('/:id', postController.getPostById);
+const postRoutes: IApiRoute[] = [
+    // Specific routes first
+    {
+        path: '/:id/save',
+        method: EApiMethod.DELETE,
+        controller: postController.unsavePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/save',
+        method: EApiMethod.POST,
+        controller: postController.savePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/share',
+        method: EApiMethod.POST,
+        controller: postController.sharePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/like',
+        method: EApiMethod.POST,
+        controller: postController.likePost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/new-feed',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/new-feed-group',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/new-feed-friend',
+        method: EApiMethod.GET,
+        controller: postController.getNewFeedFriendPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/saved',
+        method: EApiMethod.GET,
+        controller: postController.getSavedPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/profile/:userId',
+        method: EApiMethod.GET,
+        controller: postController.getProfilePosts,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId/manage/pending',
+        method: EApiMethod.GET,
+        controller: postController.getManageGroupPostsPending,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId/manage',
+        method: EApiMethod.GET,
+        controller: postController.getManageGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId/member/:userId',
+        method: EApiMethod.GET,
+        controller: postController.getPostByMember,
+        isRateLimited: true,
+    },
+    {
+        path: '/group/:groupId',
+        method: EApiMethod.GET,
+        controller: postController.getGroupPosts,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Collection routes
+    {
+        path: '/',
+        method: EApiMethod.GET,
+        controller: postController.getAllPosts,
+        isRateLimited: true,
+    },
+    {
+        path: '/',
+        method: EApiMethod.POST,
+        controller: postController.createPost,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.GET,
+        controller: postController.getPostById,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id',
+        method: EApiMethod.DELETE,
+        controller: postController.deletePost,
+    },
+];
+
+addRoutes(postRouter, postRoutes);
 
 export default postRouter;

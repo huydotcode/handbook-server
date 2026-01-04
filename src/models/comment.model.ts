@@ -1,6 +1,7 @@
-import mongoose, { Schema, Types, model, models } from 'mongoose';
+import mongoose, { Document, Schema, Types, model, models } from 'mongoose';
 
-interface ICommentModel {
+export interface ICommentModel extends Document {
+    _id: string;
     text: string;
     author: Types.ObjectId;
     replyComment: Types.ObjectId;
@@ -8,6 +9,20 @@ interface ICommentModel {
     post: Types.ObjectId;
     isDeleted: boolean;
     hasReplies: boolean;
+}
+
+export interface ICommentInput {
+    text: string;
+    author: Types.ObjectId;
+    replyComment: Types.ObjectId;
+    loves: Types.ObjectId[];
+    post: Types.ObjectId;
+}
+
+export interface ICommentOutput extends ICommentInput {
+    _id: string;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export const CommentSchema = new Schema<ICommentModel>(

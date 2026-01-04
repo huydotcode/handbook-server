@@ -1,37 +1,39 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { JwtDecoded } from '../types/jwt';
-import { UserRole } from '../enums/UserRole';
+import { JwtDecoded } from '../common/types/jwt';
+import { EUserRole } from '../models/user.model';
+import { ResponseUtil } from '../common/utils';
+import { env } from '../common/config';
 
-export default async function adminMiddlware(
+export default async function adminMiddleware(
     req: Request,
     res: Response,
     next: NextFunction
-) {
+): Promise<void> {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return ResponseUtil.unauthorized(res, 'Unauthorized');
     }
 
     const token = authHeader.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return ResponseUtil.unauthorized(res, 'Unauthorized');
     }
 
-    const secretKey = process.env.JWT_SECRET;
+    const secretKey = env.JWT_SECRET;
 
     if (!secretKey) {
-        return res.status(500).json({ message: 'Internal server error' });
+        return ResponseUtil.internalError(res, 'Internal server error');
     }
 
     const decoded = jwt.verify(token, secretKey) as JwtDecoded;
 
     if (!decoded) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return ResponseUtil.unauthorized(res, 'Unauthorized');
     }
 
-    if (decoded.role !== UserRole.ADMIN) {
-        return res.status(403).json({ message: 'Forbidden' });
+    if (decoded.role !== EUserRole.ADMIN) {
+        return ResponseUtil.forbidden(res, 'Forbidden');
     }
 
     next();

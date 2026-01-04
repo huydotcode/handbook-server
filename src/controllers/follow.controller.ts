@@ -1,33 +1,100 @@
 import { NextFunction, Request, Response } from 'express';
-import Follows from '../models/follow.model';
-import { POPULATE_USER } from '../utils/populate';
+import { ResponseUtil } from '../common/utils/response';
+import {
+    validateRequiredParam,
+    getAuthenticatedUserId,
+    validateRequiredBodyField,
+} from '../common/utils/controller.helper';
+import { FollowService } from '../services/follow.service';
 
-class FollowController {
-    public async getFollowings(
+/**
+ * Controller for follow-related HTTP endpoints.
+ */
+export class FollowController {
+    private followService: FollowService;
+
+    constructor() {
+        this.followService = new FollowService();
+    }
+
+    /**
+     * POST /api/v1/follows
+     * Follow a user.
+     */
+    public followUser = async (
         req: Request,
         res: Response,
         next: NextFunction
-    ): Promise<void> {
+    ): Promise<void> => {
         try {
-            const userId = req.params.user_id || req.query.user_id;
+            const followerId = getAuthenticatedUserId(req);
+            const { following } = req.body;
+            validateRequiredBodyField(req.body, 'following');
 
-            if (!userId) {
-                res.status(400).json({
-                    message: 'User ID is required',
-                });
-                return;
-            }
+            const follow = await this.followService.followUser(
+                followerId,
+                following,
+                followerId
+            );
 
-            const followings = await Follows.find({ follower: userId })
-                .populate('follower', POPULATE_USER)
-                .populate('following', POPULATE_USER)
-                .exec();
-
-            res.status(200).json(followings);
+            ResponseUtil.created(res, follow, 'User followed successfully');
         } catch (error) {
             next(error);
         }
-    }
-}
+    };
 
-export default new FollowController();
+    /**
+     * GET /api/v1/follows/:userId/followings
+     * Fetch followings for a user.
+     */
+    public getFollowings = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.userId;
+            validateRequiredParam(userId, 'User ID');
+
+            const followings = await this.followService.getFollowing(userId);
+
+            ResponseUtil.success(
+                res,
+                followings,
+                'Followings retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/v1/follows/:userId
+     * Unfollow a user.
+     */
+    public unfollowUser = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const followerId = getAuthenticatedUserId(req);
+            const followingId = req.params.userId;
+            validateRequiredParam(followingId, 'User ID');
+
+            await this.followService.unfollowUser(
+                followerId,
+                followingId,
+                followerId
+            );
+
+            ResponseUtil.success(
+                res,
+                { success: true },
+                'User unfollowed successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
+}

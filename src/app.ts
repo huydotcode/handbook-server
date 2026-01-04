@@ -1,23 +1,22 @@
-import dotenv from 'dotenv';
 import express from 'express';
 import helmet from 'helmet';
-import apiRouter from './routes/api.route';
-import { connectToMongo } from './services/mongodb';
-
+import apiRouter from './routes/routes';
+import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import authMiddleware from './middlewares/auth.middleware';
-import authRouter from './routes/auth.route';
-import { config } from './utils/config';
+import morgan from 'morgan';
+import { env } from './common/config';
+import {
+    globalErrorHandler,
+    handleUncaughtException,
+    handleUnhandledRejection,
+    notFoundHandler,
+} from './common/errors';
 
 dotenv.config();
 
-const morgan = require('morgan');
-
 const app = express();
-app.set('trust proxy', true);
-
-connectToMongo();
+app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -28,24 +27,41 @@ app.use(
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     })
 );
-app.use(morgan('dev'));
+// Morgan logging format based on environment
+const morganFormat = env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(morganFormat));
 
 app.use(
     cors({
-        origin: [
-            'http://localhost:3000',
-            'https://handbookk.vercel.app',
-            config.clientUrl,
-        ],
+        origin: [env.CLIENT_URL],
         credentials: true,
     })
 );
 
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1', authMiddleware, apiRouter);
+app.use('/api/v1', apiRouter);
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Server is healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+    });
 });
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+    });
+});
+
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
+handleUnhandledRejection();
+handleUncaughtException();
 
 export default app;
