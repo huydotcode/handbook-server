@@ -60,12 +60,15 @@ const userRoutes: IApiRoute[] = [
         method: EApiMethod.GET,
         controller: userController.getUsers,
         isRateLimited: true,
+        isPrivateRoute: true,
+        isAdminRoute: true,
     },
     // Dynamic routes last
     {
         path: '/:id',
         method: EApiMethod.GET,
         controller: userController.getUserById,
+        isPrivateRoute: true,
         isRateLimited: true,
     },
 ];
