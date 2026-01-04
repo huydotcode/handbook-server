@@ -1,3 +1,4 @@
+import { POPULATE_USER } from '../common/utils';
 import ConversationMember, {
     IConversationMemberModel,
 } from '../models/conversation-member.model';
@@ -11,7 +12,7 @@ export class ConversationMemberRepository extends BaseRepository<IConversationMe
     async findByConversation(conversationId: string) {
         return await this.model
             .find({ conversation: conversationId })
-            .populate('user')
+            .populate('user', POPULATE_USER)
             .lean();
     }
 
