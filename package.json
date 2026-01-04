@@ -15,7 +15,8 @@
         "migrate:authtype": "ts-node migration/migrate-user-authtype.ts",
         "migrate:conversation-roles": "ts-node migration/migrate-conversation-roles-to-members.ts",
         "migrate:friends": "ts-node migration/migrate-friends-to-friendships.ts",
-        "migrate:participants": "ts-node migration/migrate-participants-to-members.ts"
+        "migrate:participants": "ts-node migration/migrate-participants-to-members.ts",
+        "ts-node": "ts-node"
     },
     "keywords": [],
     "author": "CJ R. <cj@null.computer> (https://w3cj.now.sh)",
