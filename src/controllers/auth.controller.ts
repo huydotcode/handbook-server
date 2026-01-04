@@ -76,8 +76,12 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            // Clear refresh token cookie
-            res.clearCookie('refreshToken');
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: env.NODE_ENV === 'production',
+                sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+                path: '/',
+            });
 
             ResponseUtil.success(res, null, 'Đăng xuất thành công');
         } catch (error) {
