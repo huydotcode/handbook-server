@@ -5,10 +5,8 @@ import {
     connectToMongo,
     disconnectFromMongo,
 } from '../src/common/utils/mongodb';
-import { validateConfig } from '../src/common/utils/config';
 
 async function run() {
-    validateConfig();
     await connectToMongo();
 
     const conversations = await Conversation.find({
