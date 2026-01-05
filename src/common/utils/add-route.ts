@@ -21,9 +21,9 @@ export function addRoute(router: Router, route: IApiRoute): Router {
 
     const middlewares: RequestHandler[] = [];
 
-    if (route.isRateLimited) {
-        middlewares.push(limiteMiddleware);
-    }
+    // if (route.isRateLimited) {
+    //     middlewares.push(limiteMiddleware);
+    // }
 
     if (route.isPrivateRoute) {
         middlewares.push(authMiddleware);
