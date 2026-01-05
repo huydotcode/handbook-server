@@ -1,14 +1,21 @@
 import Redis from 'ioredis';
 import { env } from '../common/config';
+import redis from '../common/utils/redis';
+
+// Define global type augmentation for Pub/Sub singleton
+declare global {
+    var redisPubSubInstance: RedisPubSubService | undefined;
+}
 
 class RedisPubSubService {
     private publisher: Redis;
     private isConnected: boolean = false;
 
     constructor() {
-        const redisUrl = env.REDIS_URL;
-
-        this.publisher = new Redis(redisUrl, {
+        // Use duplicate() to create publisher from existing connection
+        // This reuses the connection pool instead of creating a new one
+        // redis is guaranteed to be non-undefined here since it's a singleton
+        this.publisher = redis.duplicate({
             // Connection pooling settings
             maxRetriesPerRequest: null,
             retryStrategy: (times) => {
@@ -26,6 +33,9 @@ class RedisPubSubService {
             keepAlive: 30000,
             enableReadyCheck: true,
             enableOfflineQueue: true,
+            // Lazy connect: only establish connection when first publish() is called
+            // This prevents unnecessary connections on cold start if no events are published
+            lazyConnect: true,
         });
         this.setupEventHandlers();
     }
@@ -53,12 +63,12 @@ class RedisPubSubService {
      * @param data - Event payload (will be JSON stringified)
      */
     async publish(channel: string, data: any): Promise<void> {
-        if (!this.isConnected) {
-            console.warn(`Redis not connected, skipping publish to ${channel}`);
-            return;
-        }
-
         try {
+            // Auto-connect if lazyConnect is enabled and not yet connected
+            if (!this.publisher.status || this.publisher.status === 'close') {
+                await this.publisher.connect();
+            }
+
             const payload = JSON.stringify(data);
             await this.publisher.publish(channel, payload);
             console.log(`📤 Published event to ${channel}:`, data);
@@ -106,4 +116,15 @@ class RedisPubSubService {
     }
 }
 
-export const redisPubSubService = new RedisPubSubService();
+/**
+ * Singleton Pub/Sub service instance.
+ * Reuses publisher connection across hot reloads in development.
+ */
+let redisPubSubServiceInstance = global.redisPubSubInstance;
+
+if (!redisPubSubServiceInstance) {
+    redisPubSubServiceInstance = new RedisPubSubService();
+    global.redisPubSubInstance = redisPubSubServiceInstance;
+}
+
+export const redisPubSubService = redisPubSubServiceInstance;
