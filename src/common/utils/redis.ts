@@ -37,7 +37,7 @@ const getRedisClient = (): Redis => {
         enableReadyCheck: true,
         enableOfflineQueue: true,
         // Limit connections
-        lazyConnect: false,
+        lazyConnect: true,
     });
 
     redis.on('error', (err) => {
