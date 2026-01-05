@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
+import { FriendController } from '../controllers/friend.controller';
 import { EApiMethod, IApiRoute } from '../common/types/route.type';
 import addRoutes from '../common/utils/add-route';
 
 const userRouter = Router();
 const userController = new UserController();
+const friendController = new FriendController();
 
 const userRoutes: IApiRoute[] = [
     // Specific routes first
@@ -52,6 +54,13 @@ const userRoutes: IApiRoute[] = [
         path: '/:id/friends',
         method: EApiMethod.GET,
         controller: userController.getFriends,
+        isRateLimited: true,
+    },
+    {
+        path: '/:userId/friends-with-conversations',
+        method: EApiMethod.GET,
+        controller: friendController.getFriendsWithConversations,
+        isPrivateRoute: true,
         isRateLimited: true,
     },
     // Collection routes
