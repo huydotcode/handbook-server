@@ -120,15 +120,25 @@ export class ProfileService extends BaseService<IProfileModel> {
     }
 
     /**
-     * Get combined user and profile data
-     * @param userId - User ID
+     * Get combined user and profile data by ID or username
+     * @param idOrUsername - User ID or username
      * @returns Combined user and profile data
      */
-    async getUserProfile(userId: string) {
-        this.validateId(userId, 'User ID');
+    async getUserProfile(idOrUsername: string) {
+        let user;
 
-        const user = await this.userService.getByIdOrThrow(userId);
-        const profile = await this.getOrCreateProfileByUserId(userId);
+        // Check if it's a valid MongoDB ID
+        if (idOrUsername.match(/^[0-9a-fA-F]{24}$/)) {
+            this.validateId(idOrUsername, 'User ID');
+            user = await this.userService.getByIdOrThrow(idOrUsername);
+        } else {
+            // Try to find by username
+            user = await this.userService.getUserByUsername(idOrUsername);
+        }
+
+        const profile = await this.getOrCreateProfileByUserId(
+            user._id.toString()
+        );
 
         return {
             _id: profile._id,

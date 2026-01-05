@@ -102,7 +102,7 @@ export class UserController {
 
     /**
      * GET /api/v1/users/:id/profile
-     * Get user profile (combined user and profile data).
+     * Get user profile (combined user and profile data) by ID or username.
      */
     public getUserProfile = async (
         req: Request,
@@ -110,10 +110,12 @@ export class UserController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            const idOrUsername = req.params.id;
+            validateRequiredParam(idOrUsername, 'User ID or username');
 
-            const profile = await this.profileService.getUserProfile(userId);
+            const profile = await this.profileService.getUserProfile(
+                idOrUsername
+            );
 
             ResponseUtil.success(
                 res,
