@@ -10,7 +10,7 @@ import {
 } from '../common/errors';
 import { jwt } from '../common/utils';
 import { EMailType, sendOtpEmail } from '../common/utils/mail';
-import redis from '../common/utils/redis';
+import redis, { isRedisReady } from '../common/utils/redis';
 import Profile from '../models/profile.model';
 import { EAuthType } from '../models/user.model';
 import { UserRepository } from '../repositories';
@@ -179,6 +179,13 @@ export class AuthService {
         // Nếu là quên mật khẩu, email phải tồn tại
         if (type === EMailType.FORGOT_PASSWORD && !user) {
             throw new NotFoundError('Tài khoản không tồn tại');
+        }
+
+        // Check if Redis is ready before proceeding (Fail fast)
+        if (!isRedisReady()) {
+            throw new Error(
+                'Hệ thống đang bảo trì (Database connection failed). Vui lòng thử lại sau.'
+            );
         }
 
         // Generate 6-digit OTP

@@ -32,20 +32,6 @@ const getRedisClient = (): Redis => {
             }
             return false;
         },
-        // Keep-alive settings
-        keepAlive: 30000,
-        enableReadyCheck: true,
-        enableOfflineQueue: true,
-        // Limit connections
-        lazyConnect: true,
-    });
-
-    redis.on('error', (err) => {
-        console.error('❌ Redis Client error:', err);
-    });
-
-    redis.on('connect', () => {
-        console.log('✅ Redis Client connected');
     });
 
     // Cache in global scope to prevent new connections on hot reload
@@ -54,5 +40,14 @@ const getRedisClient = (): Redis => {
 };
 
 const redis = getRedisClient();
+
+export const isRedisReady = (): boolean => {
+    return redis.status === 'ready';
+};
+
+redis.on('error', (err) => {
+    // Only log error, do not throw to prevent server crash
+    console.error('❌ Redis Client error:', err.message);
+});
 
 export default redis;

@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 import { env } from '../common/config';
-import redis from '../common/utils/redis';
+import redis, { isRedisReady } from '../common/utils/redis';
 
 // Define global type augmentation for Pub/Sub singleton
 declare global {
@@ -19,13 +19,21 @@ class RedisPubSubService {
      * @param data - Event payload (will be JSON stringified)
      */
     async publish(channel: string, data: any): Promise<void> {
+        // Graceful degradation: Check if Redis is ready before attempting to publish
+        if (!isRedisReady()) {
+            console.warn(
+                `⚠️ Skipped publishing to ${channel}: Redis not ready`
+            );
+            return;
+        }
+
         try {
             const payload = JSON.stringify(data);
             await redis.publish(channel, payload);
             console.log(`📤 Published event to ${channel}:`, data);
         } catch (error) {
+            // Log error but don't throw to prevent crashing the main flow
             console.error(`❌ Error publishing to ${channel}:`, error);
-            throw error;
         }
     }
 
@@ -35,6 +43,11 @@ class RedisPubSubService {
     async publishBatch(
         events: Array<{ channel: string; data: any }>
     ): Promise<void> {
+        if (!isRedisReady()) {
+            console.warn(`⚠️ Skipped batch publish: Redis not ready`);
+            return;
+        }
+
         const pipeline = redis.pipeline();
 
         for (const { channel, data } of events) {
@@ -47,7 +60,6 @@ class RedisPubSubService {
             console.log(`📤 Published ${events.length} events in batch`);
         } catch (error) {
             console.error('❌ Error publishing batch:', error);
-            throw error;
         }
     }
 
@@ -55,7 +67,7 @@ class RedisPubSubService {
      * Check if publisher is connected
      */
     getConnectionStatus(): boolean {
-        return redis.status === 'ready';
+        return isRedisReady();
     }
 
     /**
