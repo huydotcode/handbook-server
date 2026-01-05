@@ -8,53 +8,9 @@ declare global {
 }
 
 class RedisPubSubService {
-    private publisher: Redis;
-    private isConnected: boolean = false;
-
     constructor() {
-        // Use duplicate() to create publisher from existing connection
-        // This reuses the connection pool instead of creating a new one
-        // redis is guaranteed to be non-undefined here since it's a singleton
-        this.publisher = redis.duplicate({
-            // Connection pooling settings
-            maxRetriesPerRequest: null,
-            retryStrategy: (times) => {
-                const delay = Math.min(times * 50, 2000);
-                return delay;
-            },
-            reconnectOnError: (err) => {
-                const targetError = 'READONLY';
-                if (err.message.includes(targetError)) {
-                    return true;
-                }
-                return false;
-            },
-            // Keep-alive settings
-            keepAlive: 30000,
-            enableReadyCheck: true,
-            enableOfflineQueue: true,
-            // Lazy connect: only establish connection when first publish() is called
-            // This prevents unnecessary connections on cold start if no events are published
-            lazyConnect: true,
-        });
-        this.setupEventHandlers();
-    }
-
-    private setupEventHandlers() {
-        this.publisher.on('connect', () => {
-            console.log('✅ Redis Pub/Sub Publisher connected');
-            this.isConnected = true;
-        });
-
-        this.publisher.on('error', (err) => {
-            console.error('❌ Redis Pub/Sub Publisher error:', err);
-            this.isConnected = false;
-        });
-
-        this.publisher.on('close', () => {
-            console.log('⚠️ Redis Pub/Sub Publisher connection closed');
-            this.isConnected = false;
-        });
+        // No need to create a separate publisher connection
+        // We use the shared redis instance imported from '../common/utils/redis'
     }
 
     /**
@@ -64,13 +20,8 @@ class RedisPubSubService {
      */
     async publish(channel: string, data: any): Promise<void> {
         try {
-            // Auto-connect if lazyConnect is enabled and not yet connected
-            if (!this.publisher.status || this.publisher.status === 'close') {
-                await this.publisher.connect();
-            }
-
             const payload = JSON.stringify(data);
-            await this.publisher.publish(channel, payload);
+            await redis.publish(channel, payload);
             console.log(`📤 Published event to ${channel}:`, data);
         } catch (error) {
             console.error(`❌ Error publishing to ${channel}:`, error);
@@ -84,7 +35,7 @@ class RedisPubSubService {
     async publishBatch(
         events: Array<{ channel: string; data: any }>
     ): Promise<void> {
-        const pipeline = this.publisher.pipeline();
+        const pipeline = redis.pipeline();
 
         for (const { channel, data } of events) {
             const payload = JSON.stringify(data);
@@ -104,15 +55,17 @@ class RedisPubSubService {
      * Check if publisher is connected
      */
     getConnectionStatus(): boolean {
-        return this.isConnected;
+        return redis.status === 'ready';
     }
 
     /**
      * Close the publisher connection
      */
     async disconnect(): Promise<void> {
-        await this.publisher.quit();
-        console.log('Redis Pub/Sub Publisher disconnected');
+        // We do not disconnect here because the redis instance is shared
+        console.log(
+            'Redis Pub/Sub Publisher disconnect called (no-op for shared connection)'
+        );
     }
 }
 
