@@ -4,7 +4,7 @@
     "description": " A basic starter for an express.js API with Typescript",
     "main": "src/server.ts",
     "scripts": {
-        "start": "ts-node src/server.ts",
+        "start": "node dist/src/server.js",
         "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
         "build": "tsc",
         "start:dist": "node dist/src/server.js",
