@@ -10,6 +10,7 @@ const methodMap: Record<EApiMethod, keyof Router> = {
     [EApiMethod.GET]: 'get',
     [EApiMethod.POST]: 'post',
     [EApiMethod.PUT]: 'put',
+    [EApiMethod.PATCH]: 'patch',
     [EApiMethod.DELETE]: 'delete',
 };
 
