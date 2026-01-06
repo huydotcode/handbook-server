@@ -21,8 +21,8 @@ export class FriendshipRepository extends BaseRepository<IFriendshipModel> {
             .find({
                 $or: [{ user1: userId }, { user2: userId }],
             })
-            .populate('user1', POPULATE_USER)
-            .populate('user2', POPULATE_USER)
+            .populate('user1', POPULATE_USER + ' isOnline')
+            .populate('user2', POPULATE_USER + ' isOnline')
             .sort({ createdAt: -1 })
             .lean();
     }

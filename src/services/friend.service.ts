@@ -1,20 +1,23 @@
-import Conversation from '../models/conversation.model';
-import ConversationMember from '../models/conversation-member.model';
-import Friendship from '../models/friendship.model';
-import { Types } from 'mongoose';
+import { FriendshipRepository } from '../repositories/friendship.repository';
+import { ConversationMemberRepository } from '../repositories/conversation-member.repository';
 
-class FriendService {
+export class FriendService {
+    private friendshipRepository: FriendshipRepository;
+    private conversationMemberRepository: ConversationMemberRepository;
+
+    constructor() {
+        this.friendshipRepository = new FriendshipRepository();
+        this.conversationMemberRepository = new ConversationMemberRepository();
+    }
+
     /**
      * Get friends with their private conversations
      */
     async getFriendsWithConversations(userId: string) {
         // Get all friendships
-        const friendships = await Friendship.find({
-            $or: [{ user1: userId }, { user2: userId }],
-        })
-            .populate('user1', '_id name avatar isOnline')
-            .populate('user2', '_id name avatar isOnline')
-            .lean();
+        const friendships = await this.friendshipRepository.findFriendsOfUser(
+            userId
+        );
 
         // Extract friends
         const friends = friendships.map((friendship) => {
@@ -23,19 +26,10 @@ class FriendService {
         });
 
         // Get all private conversations where user is a member
-        const userObjectId = new Types.ObjectId(userId);
-        const conversationMembers = await ConversationMember.find({
-            user: userObjectId,
-        })
-            .populate({
-                path: 'conversation',
-                match: { type: 'private' },
-                populate: {
-                    path: 'lastMessage',
-                    select: 'content sender createdAt',
-                },
-            })
-            .lean();
+        const conversationMembers =
+            await this.conversationMemberRepository.findPrivateConversationsByUser(
+                userId
+            );
 
         const privateConversations = conversationMembers
             .filter((cm) => cm.conversation != null)
@@ -43,11 +37,10 @@ class FriendService {
 
         // Get members for each private conversation
         const conversationIds = privateConversations.map((c: any) => c._id);
-        const allMembers = await ConversationMember.find({
-            conversation: { $in: conversationIds },
-        })
-            .populate('user', '_id name avatar isOnline')
-            .lean();
+        const allMembers =
+            await this.conversationMemberRepository.findMembersByConversationIds(
+                conversationIds
+            );
 
         // Group members by conversation
         const membersByConversation = new Map();
@@ -89,32 +82,10 @@ class FriendService {
             .filter(Boolean);
 
         // Get group conversations
-        const groupConversationMembers = await ConversationMember.find({
-            user: userObjectId,
-        })
-            .populate({
-                path: 'conversation',
-                match: { type: 'group' },
-                populate: [
-                    {
-                        path: 'lastMessage',
-                        select: 'content sender createdAt',
-                    },
-                    {
-                        path: 'avatar',
-                        select: 'url',
-                    },
-                    {
-                        path: 'group',
-                        select: 'name avatar',
-                        populate: {
-                            path: 'avatar',
-                            select: 'url',
-                        },
-                    },
-                ],
-            })
-            .lean();
+        const groupConversationMembers =
+            await this.conversationMemberRepository.findGroupConversationsByUser(
+                userId
+            );
 
         const groupConversations = groupConversationMembers
             .filter((cm) => cm.conversation != null)
@@ -125,6 +96,25 @@ class FriendService {
             friendConversations,
             groupConversations,
         };
+    }
+
+    /**
+     * Get list of online friends
+     */
+    async getOnlineFriends(userId: string) {
+        // Get all friendships
+        const friendships = await this.friendshipRepository.findFriendsOfUser(
+            userId
+        );
+
+        // Extract friends
+        const friends = friendships.map((friendship) => {
+            const isUser1 = friendship.user1._id.toString() === userId;
+            return isUser1 ? friendship.user2 : friendship.user1;
+        });
+
+        // Filter online friends
+        return friends.filter((friend: any) => friend.isOnline);
     }
 }
 

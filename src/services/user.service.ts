@@ -181,4 +181,34 @@ export class UserService extends BaseService<IUserModel> {
 
         return await this.updateUser(userId, { avatar }, currentUserId);
     }
+
+    /**
+     * Update user online status
+     * @param userId - User ID
+     * @param isOnline - Online status
+     */
+    async updateUserOnlineStatus(
+        userId: string,
+        isOnline: boolean
+    ): Promise<void> {
+        this.validateId(userId);
+        const updateData: Partial<IUserModel> = { isOnline };
+
+        if (!isOnline) {
+            updateData.lastAccessed = new Date();
+        }
+
+        await this.userRepository.update(userId, updateData);
+    }
+
+    /**
+     * Update offline status for users active before a certain timestamp
+     * @param timestamp - Threshold timestamp
+     */
+    async updateOfflineStatusForStaleUsers(timestamp: Date): Promise<void> {
+        await this.userRepository.updateMany(
+            { lastAccessed: { $lt: timestamp }, isOnline: true },
+            { isOnline: false }
+        );
+    }
 }

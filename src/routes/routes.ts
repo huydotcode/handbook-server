@@ -17,12 +17,18 @@ import searchRouter from './search.route';
 import uploadRouter from './upload.route';
 import userRouter from './user.route';
 import aiRouter from './ai.route';
+import { verifyInternalSecret } from '../middlewares/internal.middleware';
+
+import realtimeRouter from './realtime.route';
 
 const apiRouter = Router();
 
 // Public routes first
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/images', imageRouter);
+
+// Internal routes
+apiRouter.use('/internal/realtime', verifyInternalSecret, realtimeRouter);
 
 // Protected routes
 apiRouter.use('/posts', postRouter);
