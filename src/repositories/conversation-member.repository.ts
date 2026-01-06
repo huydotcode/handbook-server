@@ -12,7 +12,7 @@ export class ConversationMemberRepository extends BaseRepository<IConversationMe
     async findByConversation(conversationId: string) {
         return await this.model
             .find({ conversation: conversationId })
-            .populate('user', POPULATE_USER)
+            .populate('user', POPULATE_USER + ' lastAccessed')
             .lean();
     }
 
