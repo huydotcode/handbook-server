@@ -1,39 +1,50 @@
-import Redis from 'ioredis';
+import axios from 'axios';
 import { env } from '../common/config';
-import redis, { isRedisReady } from '../common/utils/redis';
 
-// Define global type augmentation for Pub/Sub singleton
+// Define global type augmentation for singleton
 declare global {
-    var redisPubSubInstance: RedisPubSubService | undefined;
+    var eventBusInstance: EventBusService | undefined;
 }
 
-class RedisPubSubService {
+class EventBusService {
+    private readonly realtimeUrl: string;
+    private readonly secretKey: string;
+
     constructor() {
-        // No need to create a separate publisher connection
-        // We use the shared redis instance imported from '../common/utils/redis'
+        this.realtimeUrl = env.REALTIME_SERVICE_URL;
+        this.secretKey = env.INTERNAL_SECRET_KEY;
     }
 
     /**
-     * Publish an event to a channel
-     * @param channel - Event channel name
-     * @param data - Event payload (will be JSON stringified)
+     * Publish an event to a channel via HTTP
+     * @param channel - Event channel name (e.g. 'message.created')
+     * @param data - Event payload
      */
     async publish(channel: string, data: any): Promise<void> {
-        // Graceful degradation: Check if Redis is ready before attempting to publish
-        if (!isRedisReady()) {
-            console.warn(
-                `⚠️ Skipped publishing to ${channel}: Redis not ready`
-            );
-            return;
-        }
+        // Fire and forget - do not await to avoid blocking API response
+        // or await if we want to ensure delivery (usually safer to not block API for notification)
+        // For reliability, we should log errors.
+        this.sendEvent(channel, data).catch((err) => {
+            console.error(`❌ Failed to send event ${channel}:`, err.message);
+        });
+    }
 
+    private async sendEvent(channel: string, data: any) {
         try {
-            const payload = JSON.stringify(data);
-            await redis.publish(channel, payload);
-            console.log(`📤 Published event to ${channel}:`, data);
-        } catch (error) {
-            // Log error but don't throw to prevent crashing the main flow
-            console.error(`❌ Error publishing to ${channel}:`, error);
+            await axios.post(
+                `${this.realtimeUrl}/internal/events`,
+                { channel, data },
+                {
+                    headers: {
+                        'x-internal-secret': this.secretKey,
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 2000,
+                }
+            );
+            console.log(`📤 Event sent to Realtime Server: ${channel}`);
+        } catch (error: any) {
+            throw error;
         }
     }
 
@@ -43,53 +54,36 @@ class RedisPubSubService {
     async publishBatch(
         events: Array<{ channel: string; data: any }>
     ): Promise<void> {
-        if (!isRedisReady()) {
-            console.warn(`⚠️ Skipped batch publish: Redis not ready`);
-            return;
-        }
-
-        const pipeline = redis.pipeline();
-
-        for (const { channel, data } of events) {
-            const payload = JSON.stringify(data);
-            pipeline.publish(channel, payload);
-        }
-
-        try {
-            await pipeline.exec();
-            console.log(`📤 Published ${events.length} events in batch`);
-        } catch (error) {
-            console.error('❌ Error publishing batch:', error);
-        }
+        // Iterate and send individually (could be optimized with a batch endpoint later)
+        events.forEach(({ channel, data }) => {
+            this.publish(channel, data);
+        });
     }
 
     /**
-     * Check if publisher is connected
+     * Check connection (dummy)
      */
     getConnectionStatus(): boolean {
-        return isRedisReady();
+        return true;
     }
 
     /**
-     * Close the publisher connection
+     * Disconnect (noop)
      */
     async disconnect(): Promise<void> {
-        // We do not disconnect here because the redis instance is shared
-        console.log(
-            'Redis Pub/Sub Publisher disconnect called (no-op for shared connection)'
-        );
+        // No persistent connection to close
     }
 }
 
 /**
- * Singleton Pub/Sub service instance.
- * Reuses publisher connection across hot reloads in development.
+ * Singleton instance
  */
-let redisPubSubServiceInstance = global.redisPubSubInstance;
+let instance = global.eventBusInstance;
 
-if (!redisPubSubServiceInstance) {
-    redisPubSubServiceInstance = new RedisPubSubService();
-    global.redisPubSubInstance = redisPubSubServiceInstance;
+if (!instance) {
+    instance = new EventBusService();
+    global.eventBusInstance = instance;
 }
 
-export const redisPubSubService = redisPubSubServiceInstance;
+// Export as the same name to minimize refactoring in other files
+export const redisPubSubService = instance;

@@ -50,6 +50,10 @@ const envSchema = z.object({
     // Resend
     RESEND_API_KEY: z.string(),
     RESEND_FROM_EMAIL: z.string().default('onboarding@resend.dev'),
+
+    // Realtime Service
+    REALTIME_SERVICE_URL: z.string(),
+    INTERNAL_SECRET_KEY: z.string(),
 });
 
 // Process env validation
@@ -99,6 +103,10 @@ const envProcess = envSchema.safeParse({
     // Resend
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+
+    // Realtime Service
+    REALTIME_SERVICE_URL: process.env.REALTIME_SERVICE_URL,
+    INTERNAL_SECRET_KEY: process.env.INTERNAL_SECRET_KEY,
 });
 
 if (!envProcess.success) {
