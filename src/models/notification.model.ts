@@ -14,6 +14,9 @@ export enum ENotificationType {
 
     // Post like notifications
     LIKE_POST = 'like-post',
+
+    // New post notifications
+    CREATE_POST = 'create-post',
 }
 
 export interface INotificationModel extends Document {

@@ -333,6 +333,41 @@ export class NotificationService extends BaseService<INotificationModel> {
     }
 
     /**
+     * Create new post notification for a follower
+     * @param senderId - Sender ID (post author)
+     * @param receiverId - Receiver ID (follower)
+     * @param postId - Post ID
+     * @returns Created notification
+     */
+    async createPostNotification(
+        senderId: string,
+        receiverId: string,
+        postId: string
+    ) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+        this.validateId(postId, 'Post ID');
+
+        if (senderId === receiverId) {
+            return null;
+        }
+
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.CREATE_POST,
+                extra: {
+                    postId: new Types.ObjectId(postId),
+                },
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId
+        );
+    }
+
+    /**
      * Accept friend request
      * @param notificationId - Notification ID
      * @param userId - User ID accepting the request

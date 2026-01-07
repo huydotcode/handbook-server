@@ -16,6 +16,7 @@ import { FollowService } from './follow.service';
 import { FriendshipService } from './friendship.service';
 import { GroupMemberService } from './group-member.service';
 import { UserService } from './user.service';
+import { NotificationService } from './notification.service';
 
 /**
  * Service responsible for post-related business logic.
@@ -27,6 +28,8 @@ export class PostService extends BaseService<IPostModel> {
     private groupMemberService: GroupMemberService;
     private friendshipService: FriendshipService;
 
+    private notificationService: NotificationService;
+
     constructor() {
         const repository = new PostRepository();
         super(repository);
@@ -35,6 +38,7 @@ export class PostService extends BaseService<IPostModel> {
         this.followService = new FollowService();
         this.groupMemberService = new GroupMemberService();
         this.friendshipService = new FriendshipService();
+        this.notificationService = new NotificationService();
     }
 
     /**
@@ -50,7 +54,27 @@ export class PostService extends BaseService<IPostModel> {
         // Validate required fields
         this.validateRequiredFields(data, ['author']);
 
-        return await this.create(data, userId);
+        const post = await this.create(data, userId);
+
+        // Notify followers
+        try {
+            const followers = await this.followService.getFollowingIds(userId);
+            if (followers.length > 0) {
+                await Promise.all(
+                    followers.map((followerId) =>
+                        this.notificationService.createPostNotification(
+                            userId,
+                            followerId,
+                            post._id.toString()
+                        )
+                    )
+                );
+            }
+        } catch (error) {
+            console.error('Error sending post notifications:', error);
+        }
+
+        return post;
     }
 
     /**
