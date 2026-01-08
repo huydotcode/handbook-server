@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
+import { POPULATE_USER } from '../common/utils';
 import {
     ENotificationType,
     INotificationModel,
@@ -363,7 +364,11 @@ export class NotificationService extends BaseService<INotificationModel> {
                 isRead: false,
                 isDeleted: false,
             },
-            senderId
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
         );
     }
 
