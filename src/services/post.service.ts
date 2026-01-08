@@ -15,8 +15,8 @@ import { BaseService } from './base.service';
 import { FollowService } from './follow.service';
 import { FriendshipService } from './friendship.service';
 import { GroupMemberService } from './group-member.service';
-import { UserService } from './user.service';
 import { NotificationService } from './notification.service';
+import { UserService } from './user.service';
 
 /**
  * Service responsible for post-related business logic.
@@ -58,7 +58,7 @@ export class PostService extends BaseService<IPostModel> {
 
         // Notify followers
         try {
-            const followers = await this.followService.getFollowingIds(userId);
+            const followers = await this.followService.getFollowerIds(userId);
             if (followers.length > 0) {
                 await Promise.all(
                     followers.map((followerId) =>

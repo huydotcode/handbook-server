@@ -33,6 +33,17 @@ export class FollowRepository extends BaseRepository<IFollowsModel> {
     }
 
     /**
+     * Find follower IDs for a user
+     */
+    async findFollowerIds(userId: string): Promise<string[]> {
+        const followers = await this.model
+            .find({ following: userId })
+            .select('follower')
+            .lean();
+        return followers.map((f) => f.follower.toString());
+    }
+
+    /**
      * Find following IDs for a user.
      */
     async findFollowingIds(userId: string): Promise<string[]> {
