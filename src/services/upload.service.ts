@@ -206,4 +206,24 @@ export class UploadService {
             return null;
         }
     }
+    /**
+     * Upload multiple files
+     * @param files - Array of files to upload
+     * @param userId - User ID performing the action
+     * @returns Array of uploaded media
+     */
+    async uploadFiles(
+        files: UploadPayload[],
+        userId: string
+    ): Promise<IMediaModel[]> {
+        const uploadPromises = files.map((file) => {
+            if (file.mimetype.startsWith('video/')) {
+                return this.uploadVideo(file, userId);
+            } else {
+                return this.uploadImage(file, userId);
+            }
+        });
+
+        return await Promise.all(uploadPromises);
+    }
 }

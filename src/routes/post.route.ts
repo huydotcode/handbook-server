@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import { PostController } from '../controllers/post.controller';
 import { EApiMethod, IApiRoute } from '../common/types/route.type';
 import addRoutes from '../common/utils/add-route';
+import { PostController } from '../controllers/post.controller';
+import { multerFilesMiddleware } from '../middlewares/multer.middleware';
+import { createPostValidation, editPostValidation } from '../validations';
+import validateRequest from '../common/middleware/validateRequest';
 
 const postRouter = Router();
 const postController = new PostController();
@@ -110,8 +113,22 @@ const postRoutes: IApiRoute[] = [
         controller: postController.createPost,
         isPrivateRoute: true,
         isRateLimited: true,
+        middlewares: [
+            multerFilesMiddleware,
+            validateRequest({ body: createPostValidation }),
+        ],
     },
     // Dynamic routes last
+    {
+        path: '/:id',
+        method: EApiMethod.PUT,
+        controller: postController.updatePost,
+        isPrivateRoute: true,
+        middlewares: [
+            multerFilesMiddleware,
+            validateRequest({ body: editPostValidation }),
+        ],
+    },
     {
         path: '/:id',
         method: EApiMethod.GET,

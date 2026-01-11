@@ -12,6 +12,7 @@ import {
     FriendshipService,
     PostInteractionService,
     PostService,
+    UploadService,
 } from '../services';
 
 /**
@@ -21,11 +22,13 @@ export class PostController {
     private postService: PostService;
     private postInteractionService: PostInteractionService;
     private friendshipService: FriendshipService;
+    private uploadService: UploadService;
 
     constructor() {
         this.postService = new PostService();
         this.postInteractionService = new PostInteractionService();
         this.friendshipService = new FriendshipService();
+        this.uploadService = new UploadService();
     }
 
     /**
@@ -40,9 +43,39 @@ export class PostController {
         try {
             const postData = req.body;
             const userId = getAuthenticatedUserId(req);
+            const files = req.files as Express.Multer.File[];
+            let mediaIds: string[] = [];
 
+            // 1. Upload new files if any
+            if (files && files.length > 0) {
+                const uploadedMedia = await this.uploadService.uploadFiles(
+                    files.map((file) => ({
+                        buffer: file.buffer,
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        size: file.size,
+                    })),
+                    userId
+                );
+                mediaIds = uploadedMedia.map((media) => media._id.toString());
+            }
+
+            // 2. Handle legacy/separate upload mediaIds
+            if (postData.mediaIds) {
+                const bodyMediaIds = Array.isArray(postData.mediaIds)
+                    ? postData.mediaIds
+                    : [postData.mediaIds];
+                mediaIds = [...mediaIds, ...bodyMediaIds];
+            }
+
+            // 3. Create post
             const newPost = await this.postService.createPost(
-                { ...postData, author: userId },
+                {
+                    ...postData,
+                    media: mediaIds,
+                    author: userId,
+                    text: postData.content,
+                },
                 userId
             );
             ResponseUtil.created(res, newPost, 'Post created successfully');
@@ -546,6 +579,84 @@ export class PostController {
                 { success: true },
                 'Post unsaved successfully'
             );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * DELETE /api/posts/:id
+     * Delete a post by ID.
+     */
+    /**
+     * PUT /api/posts/:id
+     * Update a post by ID.
+     */
+    public updatePost = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const postId = req.params.id;
+            validateRequiredParam(postId, 'Post ID');
+            const userId = getAuthenticatedUserId(req);
+            const postData = req.body;
+            const files = req.files as Express.Multer.File[];
+
+            // Check ownership
+            const post = await this.postService.getById(postId);
+            if (!post) {
+                ResponseUtil.error(res, 'Post not found', 404);
+                return;
+            }
+
+            if (post.author.toString() !== userId) {
+                ResponseUtil.error(
+                    res,
+                    'You are not authorized to update this post',
+                    403
+                );
+                return;
+            }
+
+            let newMediaIds: string[] = [];
+
+            // 1. Upload new files if any
+            if (files && files.length > 0) {
+                const uploadedMedia = await this.uploadService.uploadFiles(
+                    files.map((file) => ({
+                        buffer: file.buffer,
+                        originalname: file.originalname,
+                        mimetype: file.mimetype,
+                        size: file.size,
+                    })),
+                    userId
+                );
+                newMediaIds = uploadedMedia.map((media) =>
+                    media._id.toString()
+                );
+            }
+
+            // 2. Handle existing media
+            let existingMediaIds: string[] = [];
+            if (postData.mediaIds) {
+                const bodyMediaIds = Array.isArray(postData.mediaIds)
+                    ? postData.mediaIds
+                    : [postData.mediaIds];
+                existingMediaIds = bodyMediaIds;
+            }
+
+            // 3. Combine new and existing media
+            const finalMediaIds = [...existingMediaIds, ...newMediaIds];
+
+            const updatedPost = await this.postService.updatePost(
+                postId,
+                { ...postData, media: finalMediaIds, text: postData.content },
+                userId
+            );
+
+            ResponseUtil.success(res, updatedPost, 'Post updated successfully');
         } catch (error) {
             next(error);
         }
