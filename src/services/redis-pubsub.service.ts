@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { env } from '../common/config';
 
-// Define global type augmentation for singleton
 declare global {
     var eventBusInstance: EventBusService | undefined;
 }
@@ -21,11 +20,8 @@ class EventBusService {
      * @param data - Event payload
      */
     async publish(channel: string, data: any): Promise<void> {
-        // Fire and forget - do not await to avoid blocking API response
-        // or await if we want to ensure delivery (usually safer to not block API for notification)
-        // For reliability, we should log errors.
         this.sendEvent(channel, data).catch((err) => {
-            console.error(`❌ Failed to send event ${channel}:`, err.message);
+            console.error(`Failed to send event ${channel}:`, err.message);
         });
     }
 
@@ -42,7 +38,7 @@ class EventBusService {
                     timeout: 2000,
                 }
             );
-            console.log(`📤 Event sent to Realtime Server: ${channel}`);
+            console.log(`Event sent to Realtime Server: ${channel}`);
         } catch (error: any) {
             throw error;
         }
@@ -54,7 +50,6 @@ class EventBusService {
     async publishBatch(
         events: Array<{ channel: string; data: any }>
     ): Promise<void> {
-        // Iterate and send individually (could be optimized with a batch endpoint later)
         events.forEach(({ channel, data }) => {
             this.publish(channel, data);
         });
@@ -70,9 +65,7 @@ class EventBusService {
     /**
      * Disconnect (noop)
      */
-    async disconnect(): Promise<void> {
-        // No persistent connection to close
-    }
+    async disconnect(): Promise<void> {}
 }
 
 /**
@@ -85,5 +78,4 @@ if (!instance) {
     global.eventBusInstance = instance;
 }
 
-// Export as the same name to minimize refactoring in other files
 export const redisPubSubService = instance;
