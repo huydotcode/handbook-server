@@ -284,7 +284,11 @@ export class NotificationService extends BaseService<INotificationModel> {
                 isRead: false,
                 isDeleted: false,
             },
-            senderId
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
         );
     }
 
@@ -329,7 +333,11 @@ export class NotificationService extends BaseService<INotificationModel> {
                 isRead: false,
                 isDeleted: false,
             },
-            senderId
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
         );
     }
 
@@ -426,7 +434,11 @@ export class NotificationService extends BaseService<INotificationModel> {
                 isRead: false,
                 isDeleted: false,
             },
-            userId
+            userId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
         );
 
         // Mark original request as handled
