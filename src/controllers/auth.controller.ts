@@ -20,7 +20,7 @@ export class AuthController {
             const result = await authService.login(account, password);
 
             // Set refresh token in httpOnly cookie
-            res.cookie('refreshToken', result.refreshToken, {
+            res.cookie('handbook_refreshToken', result.refreshToken, {
                 httpOnly: true,
                 secure: env.NODE_ENV === 'production',
                 sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -47,7 +47,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const refreshToken = req.cookies.refreshToken;
+            const refreshToken = req.cookies.handbook_refreshToken;
 
             if (!refreshToken) {
                 ResponseUtil.error(res, 'Không tìm thấy refresh token', 401);
@@ -76,7 +76,7 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            res.clearCookie('refreshToken', {
+            res.clearCookie('handbook_refreshToken', {
                 httpOnly: true,
                 secure: env.NODE_ENV === 'production',
                 sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -186,7 +186,7 @@ export class AuthController {
             const result = await authService.loginWithGoogle(code);
 
             // Set refresh token in httpOnly cookie
-            res.cookie('refreshToken', result.refreshToken, {
+            res.cookie('handbook_refreshToken', result.refreshToken, {
                 httpOnly: true,
                 secure: env.NODE_ENV === 'production',
                 sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',

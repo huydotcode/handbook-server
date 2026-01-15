@@ -134,7 +134,6 @@ export class AuthService {
             // Verify refresh token
             const payload = jwt.verifyRefreshToken(refreshToken);
 
-            // Get user from database
             const user = await this.userRepository.findById(payload.id);
 
             if (!user) {
@@ -153,6 +152,9 @@ export class AuthService {
 
             return { accessToken };
         } catch (error) {
+            if (error instanceof NotFoundError) {
+                throw error;
+            }
             throw new UnauthorizedError('Refresh token không hợp lệ');
         }
     }
