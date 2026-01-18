@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { UserController } from '../../controllers/user.controller';
 import { EApiMethod, IApiRoute } from '../../common/types/route.type';
 import addRoutes from '../../common/utils/add-route';
+import { UserController } from '../../controllers/user.controller';
 
 const userAdminRouter = Router();
 const userController = new UserController();
@@ -29,6 +29,18 @@ const routes: IApiRoute[] = [
         path: '/:id/role',
         method: EApiMethod.PATCH,
         controller: userController.updateRole,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/verify',
+        method: EApiMethod.PATCH,
+        controller: userController.verifyUser,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/unverify',
+        method: EApiMethod.PATCH,
+        controller: userController.unverifyUser,
         isRateLimited: true,
     },
 ];

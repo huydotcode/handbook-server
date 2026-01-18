@@ -132,6 +132,46 @@ export class UserController {
     };
 
     /**
+     * PATCH /api/v1/users/:id/verify
+     * Verify a user.
+     */
+    public verifyUser = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+
+            const user = await this.userService.verifyUser(userId);
+            ResponseUtil.success(res, user, 'User verified successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PATCH /api/v1/users/:id/unverify
+     * Unverify a user.
+     */
+    public unverifyUser = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+
+            const user = await this.userService.unverifyUser(userId);
+            ResponseUtil.success(res, user, 'User unverified successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
      * GET /api/v1/users/:id
      * Get user by ID.
      */

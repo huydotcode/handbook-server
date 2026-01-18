@@ -270,4 +270,18 @@ export class UserService extends BaseService<IUserModel> {
             userId
         );
     }
+
+    /**
+     * Verify a user.
+     */
+    async verifyUser(userId: string): Promise<IUserModel> {
+        return await this.updateUser(userId, { isVerified: true }, userId);
+    }
+
+    /**
+     * Unverify a user.
+     */
+    async unverifyUser(userId: string): Promise<IUserModel> {
+        return await this.updateUser(userId, { isVerified: false }, userId);
+    }
 }
