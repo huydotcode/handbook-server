@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { POPULATE_USER } from '../common/utils/populate';
-import Conversation from '../models/conversation.model';
+import { ConversationRepository } from '../repositories/conversation.repository';
 import { IMessageModel } from '../models/message.model';
 import { MessageRepository } from '../repositories/message.repository';
 import { BaseService } from './base.service';
@@ -13,11 +13,13 @@ import { eventService } from './event.service';
  */
 export class MessageService extends BaseService<IMessageModel> {
     private messageRepository: MessageRepository;
+    private conversationRepository: ConversationRepository;
 
     constructor() {
         const repository = new MessageRepository();
         super(repository);
         this.messageRepository = repository;
+        this.conversationRepository = new ConversationRepository();
     }
 
     /**
@@ -90,6 +92,17 @@ export class MessageService extends BaseService<IMessageModel> {
         } catch (error) {
             console.error('Error publishing message created event:', error);
         }
+
+        // Update conversation lastMessage
+        const conversationIdStr =
+            (message as any)?.conversation?._id?.toString?.() ||
+            (message as any)?.conversation?.toString?.() ||
+            data.conversation.toString();
+
+        await this.conversationRepository.updateLastMessage(
+            conversationIdStr,
+            message._id
+        );
 
         return message;
     }
@@ -181,12 +194,10 @@ export class MessageService extends BaseService<IMessageModel> {
         this.validateId(conversationId, 'Conversation ID');
         this.validateId(userId, 'User ID');
 
-        const conversation = await Conversation.findOne({
+        const conversation = await this.conversationRepository.findOne({
             _id: new Types.ObjectId(conversationId),
             participants: { $in: [new Types.ObjectId(userId)] },
-        })
-            .lean()
-            .exec();
+        });
 
         if (!conversation) {
             throw new NotFoundError(
@@ -314,6 +325,28 @@ export class MessageService extends BaseService<IMessageModel> {
             throw new AppError(
                 'Only the sender can delete this message',
                 HTTP_STATUS.FORBIDDEN
+            );
+        }
+
+        // Check if message is the last message
+        const conversationId = message.conversation.toString();
+        const conversation =
+            await this.conversationRepository.findById(conversationId);
+
+        if (
+            conversation &&
+            conversation.lastMessage?.toString() === messageId.toString()
+        ) {
+            // Find the new last message
+            const newLastMessage =
+                await this.messageRepository.findLatestMessage(
+                    conversationId,
+                    messageId
+                );
+
+            await this.conversationRepository.updateLastMessage(
+                conversationId,
+                newLastMessage ? newLastMessage._id : null
             );
         }
 

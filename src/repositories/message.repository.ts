@@ -80,4 +80,22 @@ export class MessageRepository extends BaseRepository<IMessageModel> {
             .sort({ createdAt: -1 })
             .lean();
     }
+
+    /**
+     * Find the latest message in a conversation, optionally excluding a specific message.
+     * @param conversationId Conversation identifier
+     * @param excludeId Optional message ID to exclude
+     */
+    async findLatestMessage(
+        conversationId: string,
+        excludeId?: string
+    ): Promise<IMessageModel | null> {
+        const filter: any = {
+            conversation: new Types.ObjectId(conversationId),
+        };
+        if (excludeId) {
+            filter._id = { $ne: new Types.ObjectId(excludeId) };
+        }
+        return await this.model.findOne(filter).sort({ createdAt: -1 }).lean();
+    }
 }

@@ -202,7 +202,7 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
      * @param messageId - Message ID
      * @returns Updated conversation
      */
-    async updateLastMessage(conversationId: string, messageId: string) {
+    async updateLastMessage(conversationId: string, messageId: string | null) {
         return await this.model
             .findByIdAndUpdate(
                 conversationId,
