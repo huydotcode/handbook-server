@@ -144,6 +144,8 @@ export class UserService extends BaseService<IUserModel> {
         role?: string;
         isBlocked?: boolean;
         isVerified?: boolean;
+        sortBy?: string;
+        order?: 'asc' | 'desc';
     }): Promise<PaginationResult<IUserModel>> {
         this.validatePagination(params.page, params.pageSize);
 
@@ -169,10 +171,34 @@ export class UserService extends BaseService<IUserModel> {
             filter.isVerified = params.isVerified;
         }
 
+        // Default sort
+        const sort: Record<string, 1 | -1> = { createdAt: -1 };
+
+        if (params.sortBy) {
+            const allowedSortFields = [
+                'name',
+                'email',
+                'username',
+                'role',
+                'createdAt',
+                'lastAccessed',
+                'followersCount',
+            ];
+            if (allowedSortFields.includes(params.sortBy)) {
+                sort[params.sortBy] = params.order === 'asc' ? 1 : -1;
+                if (params.sortBy !== 'createdAt') {
+                    delete sort.createdAt;
+                } else {
+                    sort.createdAt = params.order === 'asc' ? 1 : -1;
+                }
+            }
+        }
+
         return await this.userRepository.findPaginated(
             params.page,
             params.pageSize,
-            filter
+            filter,
+            sort
         );
     }
 

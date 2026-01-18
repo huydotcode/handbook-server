@@ -41,15 +41,13 @@ export class UserRepository extends BaseRepository<IUserModel> {
     async findPaginated(
         page: number,
         pageSize: number,
-        filter: Record<string, any> = {}
+        filter: Record<string, any> = {},
+        sort: Record<string, 1 | -1> = { createdAt: -1 }
     ) {
         const skip = (page - 1) * pageSize;
 
         const [users, total] = await Promise.all([
-            User.find(filter)
-                .skip(skip)
-                .limit(pageSize)
-                .sort({ createdAt: -1 }),
+            User.find(filter).skip(skip).limit(pageSize).sort(sort),
             User.countDocuments(filter),
         ]);
 

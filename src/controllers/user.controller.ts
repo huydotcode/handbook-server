@@ -37,7 +37,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const { page, pageSize } = getPaginationParams(req, 10);
-            const { q, role, isBlocked, isVerified } = req.query;
+            const { q, role, isBlocked, isVerified, sortBy, order } = req.query;
 
             const result = await this.userService.getUsersWithPagination({
                 page,
@@ -56,6 +56,8 @@ export class UserController {
                         : isVerified === 'false'
                           ? false
                           : undefined,
+                sortBy: sortBy as string,
+                order: order as 'asc' | 'desc',
             });
 
             ResponseUtil.paginated(
