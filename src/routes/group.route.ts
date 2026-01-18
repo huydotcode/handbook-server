@@ -82,14 +82,7 @@ const groupRoutes: IApiRoute[] = [
         controller: groupController.getJoinedGroups,
         isRateLimited: true,
     },
-    // Collection routes (admin route must be before general GET /)
-    {
-        path: '/',
-        method: EApiMethod.GET,
-        controller: groupController.getAllGroups,
-        isAdminRoute: true,
-        isRateLimited: true,
-    },
+    // Collection routes
     {
         path: '/',
         method: EApiMethod.POST,
