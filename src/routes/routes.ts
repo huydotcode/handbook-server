@@ -19,6 +19,8 @@ import userRouter from './user.route';
 import aiRouter from './ai.route';
 import { verifyInternalSecret } from '../middlewares/internal.middleware';
 
+import adminRouter from './admin';
+import adminMiddleware from '../middlewares/admin.middleware';
 import realtimeRouter from './realtime.route';
 
 const apiRouter = Router();
@@ -31,6 +33,7 @@ apiRouter.use('/images', imageRouter);
 apiRouter.use('/internal/realtime', verifyInternalSecret, realtimeRouter);
 
 // Protected routes
+apiRouter.use('/admin', adminMiddleware, adminRouter);
 apiRouter.use('/posts', postRouter);
 apiRouter.use('/comments', commentRouter);
 apiRouter.use('/conversations', conversationRouter);
