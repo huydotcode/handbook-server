@@ -28,7 +28,7 @@ export class UserController {
 
     /**
      * GET /api/v1/users
-     * Fetch users with pagination metadata.
+     * Fetch users with pagination metadata and filters.
      */
     public getUsers = async (
         req: Request,
@@ -37,10 +37,25 @@ export class UserController {
     ): Promise<void> => {
         try {
             const { page, pageSize } = getPaginationParams(req, 10);
+            const { q, role, isBlocked, isVerified } = req.query;
 
             const result = await this.userService.getUsersWithPagination({
                 page,
                 pageSize,
+                searchTerm: q as string,
+                role: role as string,
+                isBlocked:
+                    isBlocked === 'true'
+                        ? true
+                        : isBlocked === 'false'
+                          ? false
+                          : undefined,
+                isVerified:
+                    isVerified === 'true'
+                        ? true
+                        : isVerified === 'false'
+                          ? false
+                          : undefined,
             });
 
             ResponseUtil.paginated(
@@ -49,6 +64,68 @@ export class UserController {
                 result.pagination,
                 'Users retrieved successfully'
             );
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PATCH /api/v1/users/:id/block
+     * Block a user.
+     */
+    public blockUser = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+
+            const user = await this.userService.blockUser(userId);
+            ResponseUtil.success(res, user, 'User blocked successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PATCH /api/v1/users/:id/unblock
+     * Unblock a user.
+     */
+    public unblockUser = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+
+            const user = await this.userService.unblockUser(userId);
+            ResponseUtil.success(res, user, 'User unblocked successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PATCH /api/v1/users/:id/role
+     * Update user role.
+     */
+    public updateRole = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.params.id;
+            validateRequiredParam(userId, 'User ID');
+            const { role } = req.body;
+            validateRequiredBodyField(req.body, 'role');
+
+            const user = await this.userService.updateRole(userId, role);
+            ResponseUtil.success(res, user, 'User role updated successfully');
         } catch (error) {
             next(error);
         }
@@ -113,9 +190,8 @@ export class UserController {
             const idOrUsername = req.params.id;
             validateRequiredParam(idOrUsername, 'User ID or username');
 
-            const profile = await this.profileService.getUserProfile(
-                idOrUsername
-            );
+            const profile =
+                await this.profileService.getUserProfile(idOrUsername);
 
             ResponseUtil.success(
                 res,
@@ -206,9 +282,8 @@ export class UserController {
 
             const { work, education, location, dateOfBirth } = req.body;
 
-            const profile = await this.profileService.getProfileByUserId(
-                userId
-            );
+            const profile =
+                await this.profileService.getProfileByUserId(userId);
 
             if (profile.user.toString() !== currentUserId) {
                 throw new AppError(

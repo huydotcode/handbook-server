@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
-import { IUserModel } from '../models/user.model';
+import { EUserRole, IUserModel } from '../models/user.model';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
 import { FriendshipService } from './friendship.service';
@@ -134,15 +134,45 @@ export class UserService extends BaseService<IUserModel> {
     /**
      * Retrieve users with pagination metadata.
      */
+    /**
+     * Retrieve users with pagination and filtering metadata.
+     */
     async getUsersWithPagination(params: {
         page: number;
         pageSize: number;
+        searchTerm?: string;
+        role?: string;
+        isBlocked?: boolean;
+        isVerified?: boolean;
     }): Promise<PaginationResult<IUserModel>> {
         this.validatePagination(params.page, params.pageSize);
 
+        const filter: Record<string, any> = {};
+
+        if (params.searchTerm) {
+            filter.$or = [
+                { name: { $regex: params.searchTerm, $options: 'i' } },
+                { email: { $regex: params.searchTerm, $options: 'i' } },
+                { username: { $regex: params.searchTerm, $options: 'i' } },
+            ];
+        }
+
+        if (params.role) {
+            filter.role = params.role;
+        }
+
+        if (typeof params.isBlocked === 'boolean') {
+            filter.isBlocked = params.isBlocked;
+        }
+
+        if (typeof params.isVerified === 'boolean') {
+            filter.isVerified = params.isVerified;
+        }
+
         return await this.userRepository.findPaginated(
             params.page,
-            params.pageSize
+            params.pageSize,
+            filter
         );
     }
 
@@ -209,6 +239,35 @@ export class UserService extends BaseService<IUserModel> {
         await this.userRepository.updateMany(
             { lastAccessed: { $lt: timestamp }, isOnline: true },
             { isOnline: false }
+        );
+    }
+
+    /**
+     * Block a user.
+     */
+    async blockUser(userId: string): Promise<IUserModel> {
+        return await this.updateUser(userId, { isBlocked: true }, userId);
+    }
+
+    /**
+     * Unblock a user.
+     */
+    async unblockUser(userId: string): Promise<IUserModel> {
+        return await this.updateUser(userId, { isBlocked: false }, userId);
+    }
+
+    /**
+     * Update user role.
+     */
+    async updateRole(userId: string, role: string): Promise<IUserModel> {
+        if (!Object.values(EUserRole).includes(role as EUserRole)) {
+            throw new AppError('Invalid role', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        return await this.updateUser(
+            userId,
+            { role: role as EUserRole },
+            userId
         );
     }
 }

@@ -13,6 +13,24 @@ const routes: IApiRoute[] = [
         controller: userController.getUsers,
         isRateLimited: true,
     },
+    {
+        path: '/:id/block',
+        method: EApiMethod.PATCH,
+        controller: userController.blockUser,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/unblock',
+        method: EApiMethod.PATCH,
+        controller: userController.unblockUser,
+        isRateLimited: true,
+    },
+    {
+        path: '/:id/role',
+        method: EApiMethod.PATCH,
+        controller: userController.updateRole,
+        isRateLimited: true,
+    },
 ];
 
 addRoutes(userAdminRouter, routes);
