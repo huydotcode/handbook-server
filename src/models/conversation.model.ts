@@ -18,6 +18,7 @@ export interface IConversationModel extends Document {
     isDeletedBy: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
+    members?: any[];
 }
 
 export interface IConversationInput {

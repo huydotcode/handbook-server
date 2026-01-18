@@ -1,8 +1,9 @@
 import { Types } from 'mongoose';
 import { PaginationResult } from '../common/types/base';
+import { POPULATE_USER_ONLINE } from '../common/utils';
+import ConversationMember from '../models/conversation-member.model';
 import Conversation, { IConversationModel } from '../models/conversation.model';
 import { BaseRepository } from './base.repository';
-import ConversationMember from '../models/conversation-member.model';
 
 export class ConversationRepository extends BaseRepository<IConversationModel> {
     constructor() {
@@ -462,8 +463,29 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                 isDeletedBy: { $ne: userId },
             }),
         ]);
+        const fetchedConversationIds = (data as IConversationModel[]).map(
+            (c) => c._id
+        );
+
+        const members = await ConversationMember.find({
+            conversation: { $in: fetchedConversationIds },
+        })
+            .populate('user', POPULATE_USER_ONLINE)
+            .lean();
+
+        const conversationsWithMembers = (data as IConversationModel[]).map(
+            (conversation) => {
+                const conversationMembers = members.filter(
+                    (m) =>
+                        m.conversation.toString() ===
+                        conversation._id.toString()
+                );
+                return { ...conversation, members: conversationMembers };
+            }
+        );
+
         return {
-            data,
+            data: conversationsWithMembers,
             pagination: {
                 page,
                 pageSize,
