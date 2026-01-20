@@ -12,8 +12,9 @@ export enum ENotificationType {
     // Follow notifications
     FOLLOW_USER = 'follow-user',
 
-    // Post like notifications
+    // Post interactions notifications
     LIKE_POST = 'like-post',
+    COMMENT_POST = 'comment-post',
 
     // New post notifications
     CREATE_POST = 'create-post',

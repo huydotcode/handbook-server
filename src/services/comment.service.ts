@@ -8,12 +8,15 @@ import { CommentRepository } from '../repositories/comment.repository';
 import { BaseService } from './base.service';
 import { PostInteractionService } from './post-interaction.service';
 import { PostService } from './post.service';
+import { NotificationService } from './notification.service';
 
 export class CommentService extends BaseService<ICommentModel> {
     private commentRepository: CommentRepository;
     private postService: PostService = new PostService();
     private postInteractionService: PostInteractionService =
         new PostInteractionService();
+    private notificationService: NotificationService =
+        new NotificationService();
 
     constructor() {
         const repository = new CommentRepository();
@@ -64,6 +67,21 @@ export class CommentService extends BaseService<ICommentModel> {
                 },
                 postId!
             );
+
+            // Send notification to post author
+            if (post.author) {
+                const authorId =
+                    typeof post.author === 'string'
+                        ? post.author
+                        : post.author.toString();
+
+                await this.notificationService.createCommentNotification(
+                    userId,
+                    authorId,
+                    postId!,
+                    comment._id.toString()
+                );
+            }
 
             return comment;
         } catch (error) {

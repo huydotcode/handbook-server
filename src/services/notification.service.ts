@@ -381,6 +381,49 @@ export class NotificationService extends BaseService<INotificationModel> {
     }
 
     /**
+     * Create comment notification for post author
+     * @param senderId - Sender ID (commenter)
+     * @param receiverId - Receiver ID (post author)
+     * @param postId - Post ID
+     * @param commentId - Comment ID
+     * @returns Created notification
+     */
+    async createCommentNotification(
+        senderId: string,
+        receiverId: string,
+        postId: string,
+        commentId: string
+    ) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+        this.validateId(postId, 'Post ID');
+        this.validateId(commentId, 'Comment ID');
+
+        if (senderId === receiverId) {
+            return null;
+        }
+
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.COMMENT_POST,
+                extra: {
+                    postId: new Types.ObjectId(postId),
+                    commentId: new Types.ObjectId(commentId),
+                },
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
+        );
+    }
+
+    /**
      * Accept friend request
      * @param notificationId - Notification ID
      * @param userId - User ID accepting the request
