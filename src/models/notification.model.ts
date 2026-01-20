@@ -16,6 +16,10 @@ export enum ENotificationType {
     LIKE_POST = 'like-post',
     COMMENT_POST = 'comment-post',
 
+    // Comment interactions notifications
+    LIKE_COMMENT = 'like-comment',
+    REPLY_COMMENT = 'reply-comment',
+
     // New post notifications
     CREATE_POST = 'create-post',
 }

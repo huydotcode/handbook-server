@@ -83,6 +83,28 @@ export class CommentService extends BaseService<ICommentModel> {
                 );
             }
 
+            // Send notification to parent comment author if this is a reply
+            if (data.replyComment) {
+                const parentComment = await this.commentRepository.findById(
+                    data.replyComment.toString()
+                );
+
+                if (parentComment) {
+                    const parentAuthorId =
+                        typeof parentComment.author === 'string'
+                            ? parentComment.author
+                            : parentComment.author.toString();
+
+                    await this.notificationService.createReplyCommentNotification(
+                        userId,
+                        parentAuthorId,
+                        postId!,
+                        parentComment._id.toString(),
+                        comment._id.toString()
+                    );
+                }
+            }
+
             return comment;
         } catch (error) {
             if (error instanceof AppError) {
@@ -280,6 +302,26 @@ export class CommentService extends BaseService<ICommentModel> {
             if (!comment) {
                 throw new NotFoundError(
                     `Comment not found with id: ${commentId}`
+                );
+            }
+
+            // Send notification to comment author
+            if (comment.author) {
+                const authorId =
+                    typeof comment.author === 'string'
+                        ? comment.author
+                        : comment.author.toString();
+
+                const postId =
+                    typeof comment.post === 'string'
+                        ? comment.post
+                        : comment.post.toString();
+
+                await this.notificationService.createLikeCommentNotification(
+                    userId,
+                    authorId,
+                    postId,
+                    commentId
                 );
             }
 

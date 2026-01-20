@@ -424,6 +424,110 @@ export class NotificationService extends BaseService<INotificationModel> {
     }
 
     /**
+     * Create reply comment notification for parent comment author
+     * @param senderId - Sender ID (replier)
+     * @param receiverId - Receiver ID (parent comment author)
+     * @param postId - Post ID
+     * @param parentCommentId - Parent Comment ID
+     * @param replyCommentId - Reply Comment ID
+     * @returns Created notification
+     */
+    async createReplyCommentNotification(
+        senderId: string,
+        receiverId: string,
+        postId: string,
+        parentCommentId: string,
+        replyCommentId: string
+    ) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+        this.validateId(postId, 'Post ID');
+        this.validateId(parentCommentId, 'Parent Comment ID');
+        this.validateId(replyCommentId, 'Reply Comment ID');
+
+        if (senderId === receiverId) {
+            return null;
+        }
+
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.REPLY_COMMENT,
+                extra: {
+                    postId: new Types.ObjectId(postId),
+                    commentId: new Types.ObjectId(replyCommentId),
+                    parentCommentId: new Types.ObjectId(parentCommentId),
+                },
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
+        );
+    }
+
+    /**
+     * Create like comment notification for comment author
+     * @param senderId - Sender ID (liker)
+     * @param receiverId - Receiver ID (comment author)
+     * @param postId - Post ID
+     * @param commentId - Comment ID
+     * @returns Created notification
+     */
+    async createLikeCommentNotification(
+        senderId: string,
+        receiverId: string,
+        postId: string,
+        commentId: string
+    ) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+        this.validateId(postId, 'Post ID');
+        this.validateId(commentId, 'Comment ID');
+
+        // Check if user is liking their own comment
+        if (senderId === receiverId) {
+            return null;
+        }
+
+        // Check if notification already exists to avoid spamming
+        const existingNotification = await this.notificationRepository.findOne({
+            sender: senderId,
+            receiver: receiverId,
+            type: ENotificationType.LIKE_COMMENT,
+            'extra.commentId': new Types.ObjectId(commentId),
+            isDeleted: false,
+        });
+
+        if (existingNotification) {
+            return existingNotification;
+        }
+
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.LIKE_COMMENT,
+                extra: {
+                    postId: new Types.ObjectId(postId),
+                    commentId: new Types.ObjectId(commentId),
+                },
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
+        );
+    }
+
+    /**
      * Accept friend request
      * @param notificationId - Notification ID
      * @param userId - User ID accepting the request
