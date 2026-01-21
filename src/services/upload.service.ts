@@ -1,12 +1,11 @@
-import { cloudinaryClient } from '../common/config/cloudinary';
-import { MediaService } from './media.service';
 import {
-    ValidationError,
-    NotFoundError,
-    AppError,
-} from '../common/errors/app.error';
-import { IMediaModel } from '../models/media.model';
+    CLOUDINARY_DEFAULT_FOLDER,
+    cloudinaryClient,
+} from '../common/config/cloudinary';
 import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError, ValidationError } from '../common/errors/app.error';
+import { IMediaModel } from '../models/media.model';
+import { MediaService } from './media.service';
 
 export interface UploadPayload {
     buffer: Buffer;
@@ -87,7 +86,7 @@ export class UploadService {
             const uploadStream = cloudinaryClient.uploader.upload_stream(
                 {
                     resource_type: resourceType,
-                    folder: `handbook/${resourceType}s/${userId}`,
+                    folder: `${CLOUDINARY_DEFAULT_FOLDER}/${resourceType}s/${userId}`,
                 },
                 (error, result) => {
                     if (error) {

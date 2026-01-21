@@ -4,6 +4,9 @@ import { env } from './env.config';
 
 dotenvConfig();
 
+export const CLOUDINARY_DEFAULT_FOLDER =
+    env.NODE_ENV === 'development' ? 'handbook-dev' : 'handbook';
+
 cloudinary.config({
     cloud_name: env.CLOUDINARY_NAME,
     api_key: env.CLOUDINARY_KEY,
