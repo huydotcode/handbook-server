@@ -74,7 +74,6 @@ export class AIService {
 
             return {
                 response: responseText,
-                result,
             };
         } catch (error) {
             throw new ServiceUnavailableError(
