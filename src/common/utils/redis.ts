@@ -16,9 +16,9 @@ const getRedisClient = (): Redis => {
     }
 
     const redis = new Redis({
-        host: env.REDIS_HOST || 'localhost',
-        port: Number(env.REDIS_PORT) || 6379,
-        password: env.REDIS_PASSWORD || '',
+        host: env.REDIS_HOST,
+        port: Number(env.REDIS_PORT),
+        password: env.REDIS_PASSWORD,
         // Connection pooling settings
         maxRetriesPerRequest: null,
         retryStrategy: (times) => {
@@ -45,9 +45,13 @@ export const isRedisReady = (): boolean => {
     return redis.status === 'ready';
 };
 
+redis.on('connect', () => {
+    console.log(`Redis Client connected ${env.REDIS_HOST}`);
+});
+
 redis.on('error', (err) => {
     // Only log error, do not throw to prevent server crash
-    console.error('❌ Redis Client error:', err.message);
+    console.error(`Redis Client error: ${env.REDIS_HOST}`, err.message);
 });
 
 export default redis;
