@@ -47,6 +47,8 @@ const envSchema = z.object({
     AI_API_KEY: z.string(),
     AI_MODEL: z.string(),
     AI_PROMPT: z.string(),
+    AI_LIMIT_HOUR: z.string(),
+    AI_LIMIT_MESSAGE: z.string(),
 
     // Resend
     RESEND_API_KEY: z.string(),
@@ -101,6 +103,8 @@ const envProcess = envSchema.safeParse({
     AI_API_KEY: process.env.AI_API_KEY,
     AI_MODEL: process.env.AI_MODEL,
     AI_PROMPT: process.env.AI_PROMPT,
+    AI_LIMIT_HOUR: process.env.AI_LIMIT_HOUR,
+    AI_LIMIT_MESSAGE: process.env.AI_LIMIT_MESSAGE,
 
     // Resend
     RESEND_API_KEY: process.env.RESEND_API_KEY,
