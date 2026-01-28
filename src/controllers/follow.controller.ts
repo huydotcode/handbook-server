@@ -1,19 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    validateRequiredParam,
-    getAuthenticatedUserId,
-    validateRequiredBodyField,
-} from '../common/utils/controller.helper';
 import { FollowService } from '../services/follow.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller for follow-related HTTP endpoints.
  */
-export class FollowController {
+export class FollowController extends BaseController {
     private followService: FollowService;
 
     constructor() {
+        super();
         this.followService = new FollowService();
     }
 
@@ -27,9 +24,9 @@ export class FollowController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const followerId = getAuthenticatedUserId(req);
+            const followerId = this.getAuthenticatedUserId(req);
             const { following } = req.body;
-            validateRequiredBodyField(req.body, 'following');
+            this.validateRequiredBodyField(req.body, 'following');
 
             const follow = await this.followService.followUser(
                 followerId,
@@ -54,7 +51,7 @@ export class FollowController {
     ): Promise<void> => {
         try {
             const userId = req.params.userId;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const followings = await this.followService.getFollowing(userId);
 
@@ -78,9 +75,9 @@ export class FollowController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const followerId = getAuthenticatedUserId(req);
+            const followerId = this.getAuthenticatedUserId(req);
             const followingId = req.params.userId;
-            validateRequiredParam(followingId, 'User ID');
+            this.validateRequiredParam(followingId, 'User ID');
 
             await this.followService.unfollowUser(
                 followerId,

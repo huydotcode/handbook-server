@@ -1,11 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
 import { AIService } from '../services/ai.service';
+import { BaseController } from './base.controller';
 
-export class AIController {
+export class AIController extends BaseController {
     private aiService: AIService;
 
     constructor() {
+        super();
         this.aiService = new AIService();
     }
 

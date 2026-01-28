@@ -1,16 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { CommentService } from '../services';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    getAuthenticatedUserId,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
+import { BaseController } from './base.controller';
 
-export class CommentController {
+export class CommentController extends BaseController {
     private commentService: CommentService;
 
     constructor() {
+        super();
         this.commentService = new CommentService();
     }
 
@@ -25,7 +22,7 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const commentData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const comment = await this.commentService.createComment(
                 commentData,
@@ -49,8 +46,8 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const postId = req.params.postId;
-            validateRequiredParam(postId, 'Post ID');
-            const { page, pageSize } = getPaginationParams(req, 10);
+            this.validateRequiredParam(postId, 'Post ID');
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.commentService.getCommentsByPost(postId, {
                 page,
@@ -79,8 +76,8 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const commentId = req.params.commentId;
-            validateRequiredParam(commentId, 'Comment ID');
-            const { page, pageSize } = getPaginationParams(req, 10);
+            this.validateRequiredParam(commentId, 'Comment ID');
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.commentService.getReplyComments(
                 commentId,
@@ -112,7 +109,7 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Comment ID');
+            this.validateRequiredParam(id, 'Comment ID');
 
             const comment = await this.commentService.getCommentById(id);
 
@@ -137,9 +134,9 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Comment ID');
+            this.validateRequiredParam(id, 'Comment ID');
             const updateData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const comment = await this.commentService.updateComment(
                 id,
@@ -164,8 +161,8 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Comment ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Comment ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.commentService.deleteComment(id, userId);
 
@@ -186,8 +183,8 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Comment ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Comment ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const comment = await this.commentService.addLoveToComment(
                 id,
@@ -211,8 +208,8 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Comment ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Comment ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const comment = await this.commentService.removeLoveFromComment(
                 id,
@@ -236,7 +233,7 @@ export class CommentController {
     ): Promise<void> => {
         try {
             const postId = req.params.postId;
-            validateRequiredParam(postId, 'Post ID');
+            this.validateRequiredParam(postId, 'Post ID');
 
             const count = await this.commentService.countCommentsByPost(postId);
 

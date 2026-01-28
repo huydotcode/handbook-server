@@ -1,16 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
-import { CategoryService } from '../services';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    getAuthenticatedUserId,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
+import { CategoryService } from '../services';
+import { BaseController } from './base.controller';
 
-export class CategoryController {
+export class CategoryController extends BaseController {
     private categoryService: CategoryService;
 
     constructor() {
+        super();
         this.categoryService = new CategoryService();
     }
 
@@ -25,7 +22,7 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const categoryData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const category = await this.categoryService.createCategory(
                 categoryData,
@@ -52,7 +49,7 @@ export class CategoryController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.categoryService.getCategories({
                 page,
@@ -103,7 +100,7 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Category ID');
+            this.validateRequiredParam(id, 'Category ID');
 
             const category = await this.categoryService.getCategoryById(id);
 
@@ -128,7 +125,7 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const slug = req.params.slug;
-            validateRequiredParam(slug, 'Slug');
+            this.validateRequiredParam(slug, 'Slug');
 
             const category = await this.categoryService.getCategoryBySlug(slug);
 
@@ -153,9 +150,9 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Category ID');
+            this.validateRequiredParam(id, 'Category ID');
             const updateData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const category = await this.categoryService.updateCategory(
                 id,
@@ -184,8 +181,8 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Category ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Category ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.categoryService.deleteCategory(id, userId);
 
@@ -206,11 +203,10 @@ export class CategoryController {
     ): Promise<void> => {
         try {
             const searchTerm = req.query.q as string;
-            validateRequiredParam(searchTerm, 'Search term');
+            this.validateRequiredParam(searchTerm, 'Search term');
 
-            const categories = await this.categoryService.searchCategories(
-                searchTerm
-            );
+            const categories =
+                await this.categoryService.searchCategories(searchTerm);
 
             ResponseUtil.success(
                 res,

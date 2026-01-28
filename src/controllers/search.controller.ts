@@ -1,18 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
-import { SearchService } from '../services/search.service';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    getAuthenticatedUserId,
-} from '../common/utils/controller.helper';
+import { SearchService } from '../services/search.service';
+import { BaseController } from './base.controller';
 
-/**
- * Controller responsible for handling search-related HTTP requests.
- */
-export class SearchController {
+export class SearchController extends BaseController {
     private searchService: SearchService;
 
     constructor() {
+        super();
         this.searchService = new SearchService();
     }
 
@@ -27,8 +22,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = getPaginationParams(req);
-            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const results = await this.searchService.searchAll(
                 query,
@@ -58,8 +53,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = getPaginationParams(req);
-            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchUsers(
                 query,
@@ -90,8 +85,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = getPaginationParams(req);
-            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchGroups(
                 query,
@@ -122,8 +117,8 @@ export class SearchController {
     ): Promise<void> => {
         try {
             const query = req.query.q as string;
-            const { page, pageSize } = getPaginationParams(req);
-            const userId = getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.searchService.searchPosts(
                 query,

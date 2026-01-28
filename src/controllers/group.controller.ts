@@ -1,21 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getAuthenticatedUserId,
-    getOptionalUserId,
-    getPaginationParams,
-    validateRequiredBodyField,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
 import { GroupService } from '../services/group.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller handling HTTP endpoints for groups.
  */
-export class GroupController {
+export class GroupController extends BaseController {
     private groupService: GroupService;
 
     constructor() {
+        super();
         this.groupService = new GroupService();
     }
 
@@ -30,11 +25,10 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
+            this.validateRequiredParam(groupId, 'Group ID');
 
-            const group = await this.groupService.getGroupByIdWithDetails(
-                groupId
-            );
+            const group =
+                await this.groupService.getGroupByIdWithDetails(groupId);
             ResponseUtil.success(res, group, 'Group retrieved successfully');
         } catch (error) {
             next(error);
@@ -52,8 +46,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getOptionalUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getOptionalUserId(req);
 
             const result = await this.groupService.checkUserAccess(
                 groupId,
@@ -76,13 +70,14 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const userId =
-                (req.query.user_id as string) || getOptionalUserId(req);
+                (req.query.user_id as string) || this.getOptionalUserId(req);
 
             if (!userId) {
-                const authenticatedUserId = getAuthenticatedUserId(req);
-                const groups = await this.groupService.getJoinedGroups(
-                    authenticatedUserId
-                );
+                const authenticatedUserId = this.getAuthenticatedUserId(req);
+                const groups =
+                    await this.groupService.getJoinedGroups(
+                        authenticatedUserId
+                    );
                 ResponseUtil.success(
                     res,
                     groups,
@@ -111,11 +106,11 @@ export class GroupController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const groupData = req.body;
-            validateRequiredBodyField(req.body, 'name');
-            validateRequiredBodyField(req.body, 'description');
-            validateRequiredBodyField(req.body, 'avatar');
+            this.validateRequiredBodyField(req.body, 'name');
+            this.validateRequiredBodyField(req.body, 'description');
+            this.validateRequiredBodyField(req.body, 'avatar');
 
             const group = await this.groupService.createGroup(
                 groupData,
@@ -139,8 +134,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
             const groupData = req.body;
 
             const group = await this.groupService.updateGroup(
@@ -166,8 +161,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.groupService.deleteGroup(groupId, userId);
 
@@ -192,8 +187,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const group = await this.groupService.joinGroup(groupId, userId);
 
@@ -214,8 +209,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const group = await this.groupService.leaveGroup(groupId, userId);
 
@@ -236,8 +231,8 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const { page, pageSize } = getPaginationParams(req, 20);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             const result = await this.groupService.getGroupMembers(
                 groupId,
@@ -267,8 +262,9 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const userId =
-                (req.query.user_id as string) || getAuthenticatedUserId(req);
-            validateRequiredParam(userId, 'User ID');
+                (req.query.user_id as string) ||
+                this.getAuthenticatedUserId(req);
+            this.validateRequiredParam(userId, 'User ID');
 
             const groups = await this.groupService.getRecommendedGroups(userId);
 
@@ -293,10 +289,10 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
             const { coverPhoto } = req.body;
-            validateRequiredBodyField(req.body, 'coverPhoto');
+            this.validateRequiredBodyField(req.body, 'coverPhoto');
 
             const group = await this.groupService.updateCoverPhoto(
                 groupId,
@@ -325,10 +321,10 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
             const { avatar } = req.body;
-            validateRequiredBodyField(req.body, 'avatar');
+            this.validateRequiredBodyField(req.body, 'avatar');
 
             const group = await this.groupService.updateAvatar(
                 groupId,
@@ -352,7 +348,7 @@ export class GroupController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { page, pageSize } = getPaginationParams(req, 20);
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             const result = await this.groupService.getAllGroups(page, pageSize);
 
@@ -378,10 +374,10 @@ export class GroupController {
     ): Promise<void> => {
         try {
             const groupId = req.params.id;
-            validateRequiredParam(groupId, 'Group ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
             const { user, role } = req.body as { user: string; role?: string };
-            validateRequiredBodyField(req.body, 'user');
+            this.validateRequiredBodyField(req.body, 'user');
 
             // Verify permissions inside service (admin/creator)
             const group = await this.groupService.addMember(groupId, user);
@@ -404,9 +400,9 @@ export class GroupController {
         try {
             const groupId = req.params.id;
             const targetUserId = req.params.userId;
-            validateRequiredParam(groupId, 'Group ID');
-            validateRequiredParam(targetUserId, 'User ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            this.validateRequiredParam(targetUserId, 'User ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const group = await this.groupService.removeMember(
                 groupId,
@@ -432,10 +428,10 @@ export class GroupController {
             const groupId = req.params.id;
             const targetUserId = req.params.userId;
             const { role } = req.body as { role: 'ADMIN' | 'MEMBER' };
-            validateRequiredParam(groupId, 'Group ID');
-            validateRequiredParam(targetUserId, 'User ID');
-            validateRequiredBodyField(req.body, 'role');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(groupId, 'Group ID');
+            this.validateRequiredParam(targetUserId, 'User ID');
+            this.validateRequiredBodyField(req.body, 'role');
+            const userId = this.getAuthenticatedUserId(req);
 
             const updated = await this.groupService.updateMemberRole(
                 groupId,

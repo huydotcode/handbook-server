@@ -1,18 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
-import { ConversationService, ConversationMemberService } from '../services';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    getAuthenticatedUserId,
-    validateRequiredParam,
-    validateRequiredBodyField,
-} from '../common/utils/controller.helper';
+import { ConversationMemberService, ConversationService } from '../services';
+import { BaseController } from './base.controller';
 
-export class ConversationController {
+export class ConversationController extends BaseController {
     private conversationService: ConversationService;
     private conversationMemberService: ConversationMemberService;
 
     constructor() {
+        super();
         this.conversationService = new ConversationService();
         this.conversationMemberService = new ConversationMemberService();
     }
@@ -28,7 +24,7 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const conversationData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation =
                 await this.conversationService.createConversation(
@@ -57,7 +53,7 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const groupId = req.query.group_id as string;
-            const { page, pageSize } = getPaginationParams(req, 20);
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             if (groupId) {
                 // Get conversations by group ID
@@ -80,8 +76,8 @@ export class ConversationController {
                 // Get conversations by participant
                 const userId =
                     (req.query.user_id as string) ||
-                    getAuthenticatedUserId(req);
-                validateRequiredParam(userId, 'User ID');
+                    this.getAuthenticatedUserId(req);
+                this.validateRequiredParam(userId, 'User ID');
 
                 const result =
                     await this.conversationService.getConversationsByParticipant(
@@ -115,8 +111,8 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation =
                 await this.conversationService.getConversationById(id, userId);
@@ -142,9 +138,9 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
+            this.validateRequiredParam(id, 'Conversation ID');
             const updateData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation =
                 await this.conversationService.updateConversation(
@@ -174,10 +170,10 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
+            this.validateRequiredParam(id, 'Conversation ID');
             const { participantId } = req.body;
-            validateRequiredBodyField(req.body, 'participantId');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredBodyField(req.body, 'participantId');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation = await this.conversationService.addParticipant(
                 id,
@@ -207,9 +203,9 @@ export class ConversationController {
         try {
             const id = req.params.id;
             const participantId = req.params.participantId;
-            validateRequiredParam(id, 'Conversation ID');
-            validateRequiredParam(participantId, 'Participant ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            this.validateRequiredParam(participantId, 'Participant ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation =
                 await this.conversationService.removeParticipant(
@@ -239,10 +235,10 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
+            this.validateRequiredParam(id, 'Conversation ID');
             const { messageId } = req.body;
-            validateRequiredBodyField(req.body, 'messageId');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredBodyField(req.body, 'messageId');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation = await this.conversationService.pinMessage(
                 id,
@@ -272,9 +268,9 @@ export class ConversationController {
         try {
             const id = req.params.id;
             const messageId = req.params.messageId;
-            validateRequiredParam(id, 'Conversation ID');
-            validateRequiredParam(messageId, 'Message ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            this.validateRequiredParam(messageId, 'Message ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation = await this.conversationService.unpinMessage(
                 id,
@@ -303,8 +299,8 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.conversationService.deleteConversationForUser(
                 id,
@@ -328,10 +324,11 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const userId =
-                (req.query.user_id as string) || getAuthenticatedUserId(req);
+                (req.query.user_id as string) ||
+                this.getAuthenticatedUserId(req);
             const friendId = req.query.friend_id as string;
-            validateRequiredParam(userId, 'User ID');
-            validateRequiredParam(friendId, 'Friend ID');
+            this.validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(friendId, 'Friend ID');
 
             const result =
                 await this.conversationService.getPrivateConversation(
@@ -362,8 +359,8 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const conversation =
                 await this.conversationService.restoreConversation(id, userId);
@@ -389,8 +386,8 @@ export class ConversationController {
     ): Promise<void> => {
         try {
             const id = req.params.id;
-            validateRequiredParam(id, 'Conversation ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(id, 'Conversation ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const isAllowed = await this.conversationMemberService.isMember(
                 id,
@@ -403,9 +400,8 @@ export class ConversationController {
                 );
             }
 
-            const members = await this.conversationMemberService.listMembers(
-                id
-            );
+            const members =
+                await this.conversationMemberService.listMembers(id);
 
             ResponseUtil.success(
                 res,

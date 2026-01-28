@@ -1,18 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getAuthenticatedUserId,
-    validateRequiredBodyField,
-} from '../common/utils/controller.helper';
 import { LocationService } from '../services/location.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller responsible for location resources.
  */
-export class LocationController {
+export class LocationController extends BaseController {
     private locationService: LocationService;
 
     constructor() {
+        super();
         this.locationService = new LocationService();
     }
 
@@ -57,12 +55,12 @@ export class LocationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const locationData = req.body;
-            validateRequiredBodyField(req.body, 'name');
-            validateRequiredBodyField(req.body, 'slug');
-            validateRequiredBodyField(req.body, 'type');
-            validateRequiredBodyField(req.body, 'code');
+            this.validateRequiredBodyField(req.body, 'name');
+            this.validateRequiredBodyField(req.body, 'slug');
+            this.validateRequiredBodyField(req.body, 'type');
+            this.validateRequiredBodyField(req.body, 'code');
 
             const location = await this.locationService.createLocation(
                 locationData,

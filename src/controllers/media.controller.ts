@@ -1,18 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
 import { MediaService } from '../services/media.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller for handling media-related HTTP requests (admin only).
  */
-export class MediaController {
+export class MediaController extends BaseController {
     private mediaService: MediaService;
 
     constructor() {
+        super();
         this.mediaService = new MediaService();
     }
 
@@ -26,7 +24,7 @@ export class MediaController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { page, pageSize } = getPaginationParams(req, 20);
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             const result = await this.mediaService.getAllMedias(page, pageSize);
 
@@ -52,7 +50,7 @@ export class MediaController {
     ): Promise<void> => {
         try {
             const mediaId = req.params.id;
-            validateRequiredParam(mediaId, 'Media ID');
+            this.validateRequiredParam(mediaId, 'Media ID');
             // Admin middleware will handle authentication
             // We'll use a placeholder userId since admin can delete any media
             const userId = (req as any).user?.userId || 'admin';

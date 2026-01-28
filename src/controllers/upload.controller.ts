@@ -1,20 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
-import { ResponseUtil } from '../common/utils/response';
-import {
-    getAuthenticatedUserId,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
-import { UploadService } from '../services/upload.service';
-import { AppError } from '../common/errors/app.error';
 import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError } from '../common/errors/app.error';
+import { ResponseUtil } from '../common/utils/response';
+import { UploadService } from '../services/upload.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller for handling media uploads.
  */
-export class UploadController {
+export class UploadController extends BaseController {
     private uploadService: UploadService;
 
     constructor() {
+        super();
         this.uploadService = new UploadService();
     }
 
@@ -28,7 +26,7 @@ export class UploadController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const file = req.file;
 
             const media = await this.uploadService.uploadImage(
@@ -57,7 +55,7 @@ export class UploadController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const file = req.file;
 
             const media = await this.uploadService.uploadVideo(
@@ -87,7 +85,7 @@ export class UploadController {
     ): Promise<void> => {
         try {
             const imageId = req.params.id;
-            validateRequiredParam(imageId, 'Image ID');
+            this.validateRequiredParam(imageId, 'Image ID');
 
             const result = await this.uploadService.getImageById(imageId);
 
@@ -119,7 +117,7 @@ export class UploadController {
                 );
             }
 
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.uploadService.deleteImageByUrl(imageUrl, userId);
 

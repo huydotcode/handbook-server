@@ -1,13 +1,15 @@
 import { Request, Response } from 'express';
 import { ConversationService, UserService } from '../services';
 import { FriendService } from '../services/friend.service';
+import { BaseController } from './base.controller';
 
-export class RealtimeController {
+export class RealtimeController extends BaseController {
     private conversationService: ConversationService;
     private userService: UserService;
     private friendService: FriendService;
 
     constructor() {
+        super();
         this.conversationService = new ConversationService();
         this.userService = new UserService();
         this.friendService = new FriendService();
@@ -100,9 +102,8 @@ export class RealtimeController {
         try {
             const userId = req.params.id;
 
-            const onlineFriends = await this.friendService.getOnlineFriends(
-                userId
-            );
+            const onlineFriends =
+                await this.friendService.getOnlineFriends(userId);
             res.json(onlineFriends);
         } catch (error) {
             console.error('Error in getOnlineFriends:', error);

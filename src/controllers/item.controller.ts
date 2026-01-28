@@ -1,22 +1,18 @@
 import { NextFunction, Request, Response } from 'express';
-import { ResponseUtil } from '../common/utils/response';
-import {
-    getAuthenticatedUserId,
-    getPaginationParams,
-    validateRequiredParam,
-    validateRequiredBodyField,
-} from '../common/utils/controller.helper';
-import { ItemService } from '../services/item.service';
-import { AppError } from '../common/errors/app.error';
 import { HTTP_STATUS } from '../common/constants/status-code';
+import { AppError } from '../common/errors/app.error';
+import { ResponseUtil } from '../common/utils/response';
+import { ItemService } from '../services/item.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller responsible for marketplace item endpoints.
  */
-export class ItemController {
+export class ItemController extends BaseController {
     private itemService: ItemService;
 
     constructor() {
+        super();
         this.itemService = new ItemService();
     }
 
@@ -31,7 +27,7 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const categoryId = req.query.category_id as string;
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             let result;
             if (categoryId) {
@@ -78,7 +74,7 @@ export class ItemController {
                 );
             }
 
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.itemService.searchItems(
                 query,
@@ -108,7 +104,7 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const sellerId = req.params.sellerId;
-            validateRequiredParam(sellerId, 'Seller ID');
+            this.validateRequiredParam(sellerId, 'Seller ID');
 
             const items = await this.itemService.getItemsBySeller(sellerId);
 
@@ -132,13 +128,13 @@ export class ItemController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const itemData = req.body;
-            validateRequiredBodyField(req.body, 'name');
-            validateRequiredBodyField(req.body, 'description');
-            validateRequiredBodyField(req.body, 'price');
-            validateRequiredBodyField(req.body, 'category');
-            validateRequiredBodyField(req.body, 'location');
+            this.validateRequiredBodyField(req.body, 'name');
+            this.validateRequiredBodyField(req.body, 'description');
+            this.validateRequiredBodyField(req.body, 'price');
+            this.validateRequiredBodyField(req.body, 'category');
+            this.validateRequiredBodyField(req.body, 'location');
 
             const item = await this.itemService.createItem(itemData, userId);
 
@@ -159,7 +155,7 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const itemId = req.params.id;
-            validateRequiredParam(itemId, 'Item ID');
+            this.validateRequiredParam(itemId, 'Item ID');
 
             const item = await this.itemService.getItemByIdWithDetails(itemId);
 
@@ -180,8 +176,8 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const itemId = req.params.id;
-            validateRequiredParam(itemId, 'Item ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(itemId, 'Item ID');
+            const userId = this.getAuthenticatedUserId(req);
             const itemData = req.body;
 
             const item = await this.itemService.updateItem(
@@ -207,8 +203,8 @@ export class ItemController {
     ): Promise<void> => {
         try {
             const itemId = req.params.id;
-            validateRequiredParam(itemId, 'Item ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(itemId, 'Item ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.itemService.deleteItem(itemId, userId);
 

@@ -5,4 +5,3 @@ export * from './populate';
 export * from './get-session';
 export * from './jwt';
 export * from './add-route';
-export * from './controller.helper';

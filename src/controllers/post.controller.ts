@@ -1,10 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import {
-    getAuthenticatedUserId,
-    getOptionalUserId,
-    getPaginationParams,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
 import { ResponseUtil } from '../common/utils/response';
 import { EPostInteractionType } from '../models/post-interaction.model';
 import { EPostOption, EPostStatus } from '../models/post.model';
@@ -14,17 +8,19 @@ import {
     PostService,
     UploadService,
 } from '../services';
+import { BaseController } from './base.controller';
 
 /**
  * Controller for post-related HTTP handlers.
  */
-export class PostController {
+export class PostController extends BaseController {
     private postService: PostService;
     private postInteractionService: PostInteractionService;
     private friendshipService: FriendshipService;
     private uploadService: UploadService;
 
     constructor() {
+        super();
         this.postService = new PostService();
         this.postInteractionService = new PostInteractionService();
         this.friendshipService = new FriendshipService();
@@ -42,7 +38,7 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postData = req.body;
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const files = req.files as Express.Multer.File[];
             let mediaIds: string[] = [];
 
@@ -112,8 +108,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getOptionalUserId(req) || postId; // Fallback to postId if not authenticated
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getOptionalUserId(req) || postId; // Fallback to postId if not authenticated
 
             const post = await this.postService.getPostById(postId, userId);
             ResponseUtil.success(res, post, 'Post retrieved successfully');
@@ -132,8 +128,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
-            const { page, pageSize } = getPaginationParams(req, 3);
+            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedPosts(
                 userId,
@@ -161,8 +157,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
-            const { page, pageSize } = getPaginationParams(req, 3);
+            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedFriendPosts(
                 userId,
@@ -190,8 +186,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
-            const { page, pageSize } = getPaginationParams(req, 3);
+            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getNewFeedGroupPosts(
                 userId,
@@ -220,10 +216,10 @@ export class PostController {
     ): Promise<void> => {
         try {
             const userId = req.params.userId;
-            validateRequiredParam(userId, 'User ID');
-            const authenticatedUserId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(userId, 'User ID');
+            const authenticatedUserId = this.getAuthenticatedUserId(req);
             const isUserAuthenticated = authenticatedUserId === userId;
-            const { page, pageSize } = getPaginationParams(req, 3);
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const isFriend = await this.friendshipService.areFriends(
                 authenticatedUserId,
@@ -244,10 +240,10 @@ export class PostController {
                               ],
                           }
                         : isFriend
-                        ? {
-                              $in: [EPostOption.PUBLIC, EPostOption.FRIEND],
-                          }
-                        : EPostOption.PUBLIC,
+                          ? {
+                                $in: [EPostOption.PUBLIC, EPostOption.FRIEND],
+                            }
+                          : EPostOption.PUBLIC,
                 },
                 authenticatedUserId,
                 page,
@@ -275,10 +271,10 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const groupId = req.params.groupId;
-            validateRequiredParam(groupId, 'Group ID');
-            const { page, pageSize } = getPaginationParams(req, 3);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -311,10 +307,10 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const groupId = req.params.groupId;
-            validateRequiredParam(groupId, 'Group ID');
-            const { page, pageSize } = getPaginationParams(req, 3);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -347,10 +343,10 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const groupId = req.params.groupId;
-            validateRequiredParam(groupId, 'Group ID');
-            const { page, pageSize } = getPaginationParams(req, 3);
+            this.validateRequiredParam(groupId, 'Group ID');
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -385,10 +381,10 @@ export class PostController {
         try {
             const userId = req.params.userId;
             const groupId = req.params.groupId;
-            validateRequiredParam(userId, 'User ID');
-            validateRequiredParam(groupId, 'Group ID');
-            const authenticatedUserId = getOptionalUserId(req) || userId;
-            const { page, pageSize } = getPaginationParams(req, 3);
+            this.validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(groupId, 'Group ID');
+            const authenticatedUserId = this.getOptionalUserId(req) || userId;
+            const { page, pageSize } = this.getPaginationParams(req, 3);
 
             const result = await this.postService.getPostsWithInteraction(
                 {
@@ -422,8 +418,8 @@ export class PostController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const userId = this.getAuthenticatedUserId(req);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.postService.getSavedPosts(
                 userId,
@@ -453,8 +449,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.postInteractionService.toggleInteraction(
                 postId,
@@ -485,8 +481,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.postInteractionService.toggleInteraction(
                 postId,
@@ -517,8 +513,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.postInteractionService.toggleInteraction(
                 postId,
@@ -549,8 +545,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             // Check if post is saved
             const isSaved = await this.postInteractionService.hasUserInteracted(
@@ -599,8 +595,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
             const postData = req.body;
             const files = req.files as Express.Multer.File[];
 
@@ -673,8 +669,8 @@ export class PostController {
     ): Promise<void> => {
         try {
             const postId = req.params.id;
-            validateRequiredParam(postId, 'Post ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(postId, 'Post ID');
+            const userId = this.getAuthenticatedUserId(req);
             await this.postService.deletePost(postId, userId);
             ResponseUtil.success(
                 res,

@@ -1,20 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils/response';
-import {
-    getPaginationParams,
-    validateRequiredParam,
-    getAuthenticatedUserId,
-    validateRequiredBodyField,
-} from '../common/utils/controller.helper';
 import { NotificationService } from '../services/notification.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller responsible for notification-related endpoints.
  */
-export class NotificationController {
+export class NotificationController extends BaseController {
     private notificationService: NotificationService;
 
     constructor() {
+        super();
         this.notificationService = new NotificationService();
     }
 
@@ -29,9 +25,9 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const receiverId = req.params.receiverId;
-            validateRequiredParam(receiverId, 'Receiver ID');
+            this.validateRequiredParam(receiverId, 'Receiver ID');
 
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result =
                 await this.notificationService.getNotificationsWithPagination(
@@ -62,9 +58,9 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const senderId = req.params.senderId;
-            validateRequiredParam(senderId, 'Sender ID');
+            this.validateRequiredParam(senderId, 'Sender ID');
 
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
 
             const result = await this.notificationService.getRequestsBySender(
                 senderId,
@@ -93,9 +89,9 @@ export class NotificationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const senderId = getAuthenticatedUserId(req);
+            const senderId = this.getAuthenticatedUserId(req);
             const { receiver } = req.body;
-            validateRequiredBodyField(req.body, 'receiver');
+            this.validateRequiredBodyField(req.body, 'receiver');
 
             const notification =
                 await this.notificationService.sendFriendRequest(
@@ -123,9 +119,9 @@ export class NotificationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const { receiver } = req.body;
-            validateRequiredBodyField(req.body, 'receiver');
+            this.validateRequiredBodyField(req.body, 'receiver');
 
             const notification =
                 await this.notificationService.createFollowUserNotification(
@@ -154,8 +150,8 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const notificationId = req.params.id;
-            validateRequiredParam(notificationId, 'Notification ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(notificationId, 'Notification ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.notificationService.acceptFriendRequest(
                 notificationId,
@@ -183,8 +179,8 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const notificationId = req.params.id;
-            validateRequiredParam(notificationId, 'Notification ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(notificationId, 'Notification ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             const result = await this.notificationService.declineFriendRequest(
                 notificationId,
@@ -211,10 +207,10 @@ export class NotificationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const notificationData = req.body;
-            validateRequiredBodyField(req.body, 'receiver');
-            validateRequiredBodyField(req.body, 'type');
+            this.validateRequiredBodyField(req.body, 'receiver');
+            this.validateRequiredBodyField(req.body, 'type');
 
             const notification =
                 await this.notificationService.createNotification(
@@ -243,7 +239,7 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const notificationId = req.params.id;
-            validateRequiredParam(notificationId, 'Notification ID');
+            this.validateRequiredParam(notificationId, 'Notification ID');
 
             const notification =
                 await this.notificationService.getNotificationById(
@@ -270,7 +266,7 @@ export class NotificationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.notificationService.markAllAsRead(userId);
 
@@ -295,8 +291,8 @@ export class NotificationController {
     ): Promise<void> => {
         try {
             const notificationId = req.params.id;
-            validateRequiredParam(notificationId, 'Notification ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(notificationId, 'Notification ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.notificationService.deleteNotification(
                 notificationId,
@@ -323,10 +319,10 @@ export class NotificationController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const { sender, receiver } = req.body;
-            validateRequiredBodyField(req.body, 'sender');
-            validateRequiredBodyField(req.body, 'receiver');
+            this.validateRequiredBodyField(req.body, 'sender');
+            this.validateRequiredBodyField(req.body, 'receiver');
 
             await this.notificationService.deleteNotificationByUsers(
                 sender,

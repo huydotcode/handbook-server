@@ -1,20 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
-import {
-    getAuthenticatedUserId,
-    getPaginationParams,
-    validateRequiredBodyField,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
 import { ResponseUtil } from '../common/utils/response';
 import { MessageService } from '../services/message.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller handling HTTP endpoints for messages.
  */
-export class MessageController {
+export class MessageController extends BaseController {
     private messageService: MessageService;
 
     constructor() {
+        super();
         this.messageService = new MessageService();
     }
 
@@ -28,11 +24,11 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const conversationId = req.params.conversationId;
-            validateRequiredParam(conversationId, 'Conversation ID');
+            this.validateRequiredParam(conversationId, 'Conversation ID');
 
-            const { page, pageSize } = getPaginationParams(req, 20);
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             const result = await this.messageService.getConversationMessages(
                 conversationId,
@@ -62,11 +58,11 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const conversationId = req.params.conversationId;
-            validateRequiredParam(conversationId, 'Conversation ID');
+            this.validateRequiredParam(conversationId, 'Conversation ID');
 
-            const { page, pageSize } = getPaginationParams(req, 20);
+            const { page, pageSize } = this.getPaginationParams(req, 20);
 
             const result =
                 await this.messageService.getPinnedConversationMessages(
@@ -97,9 +93,9 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const conversationId = req.params.conversationId;
-            validateRequiredParam(conversationId, 'Conversation ID');
+            this.validateRequiredParam(conversationId, 'Conversation ID');
 
             const keyword = (req.query.q as string) || '';
 
@@ -126,9 +122,9 @@ export class MessageController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const userId = getAuthenticatedUserId(req);
+            const userId = this.getAuthenticatedUserId(req);
             const messageData = req.body;
-            validateRequiredBodyField(req.body, 'conversation');
+            this.validateRequiredBodyField(req.body, 'conversation');
 
             const message = await this.messageService.createMessage(
                 messageData,
@@ -152,8 +148,8 @@ export class MessageController {
     ): Promise<void> => {
         try {
             const messageId = req.params.id;
-            validateRequiredParam(messageId, 'Message ID');
-            const userId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(messageId, 'Message ID');
+            const userId = this.getAuthenticatedUserId(req);
 
             await this.messageService.deleteMessage(messageId, userId);
 

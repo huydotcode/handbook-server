@@ -3,8 +3,13 @@ import { NextFunction, Request, Response } from 'express';
 import { env } from '../common/config';
 import { ResponseUtil } from '../common/utils';
 import authService from '../services/auth.service';
+import { BaseController } from './base.controller';
 
-export class AuthController {
+export class AuthController extends BaseController {
+    constructor() {
+        super();
+    }
+
     /**
      * Login user
      * POST /api/v1/auth/login

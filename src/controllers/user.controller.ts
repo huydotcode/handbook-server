@@ -1,26 +1,22 @@
 import { NextFunction, Request, Response } from 'express';
 import { HTTP_STATUS } from '../common/constants';
 import { AppError } from '../common/errors';
-import {
-    getAuthenticatedUserId,
-    getPaginationParams,
-    validateRequiredBodyField,
-    validateRequiredParam,
-} from '../common/utils/controller.helper';
 import { ResponseUtil } from '../common/utils/response';
 import { MediaService } from '../services/media.service';
 import { ProfileService } from '../services/profile.service';
 import { UserService } from '../services/user.service';
+import { BaseController } from './base.controller';
 
 /**
  * Controller for user-related HTTP handlers.
  */
-export class UserController {
+export class UserController extends BaseController {
     private userService: UserService;
     private profileService: ProfileService;
     private mediaService: MediaService;
 
     constructor() {
+        super();
         this.userService = new UserService();
         this.profileService = new ProfileService();
         this.mediaService = new MediaService();
@@ -36,7 +32,7 @@ export class UserController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const { page, pageSize } = getPaginationParams(req, 10);
+            const { page, pageSize } = this.getPaginationParams(req, 10);
             const { q, role, isBlocked, isVerified, sortBy, order } = req.query;
 
             const result = await this.userService.getUsersWithPagination({
@@ -82,7 +78,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const user = await this.userService.blockUser(userId);
             ResponseUtil.success(res, user, 'User blocked successfully');
@@ -102,7 +98,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const user = await this.userService.unblockUser(userId);
             ResponseUtil.success(res, user, 'User unblocked successfully');
@@ -122,9 +118,9 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
             const { role } = req.body;
-            validateRequiredBodyField(req.body, 'role');
+            this.validateRequiredBodyField(req.body, 'role');
 
             const user = await this.userService.updateRole(userId, role);
             ResponseUtil.success(res, user, 'User role updated successfully');
@@ -144,7 +140,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const user = await this.userService.verifyUser(userId);
             ResponseUtil.success(res, user, 'User verified successfully');
@@ -164,7 +160,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const user = await this.userService.unverifyUser(userId);
             ResponseUtil.success(res, user, 'User unverified successfully');
@@ -184,7 +180,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const user = await this.userService.getByIdOrThrow(userId);
 
@@ -205,7 +201,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
             const friends = await this.userService.getUserFriends(userId);
 
@@ -230,7 +226,7 @@ export class UserController {
     ): Promise<void> => {
         try {
             const idOrUsername = req.params.id;
-            validateRequiredParam(idOrUsername, 'User ID or username');
+            this.validateRequiredParam(idOrUsername, 'User ID or username');
 
             const profile =
                 await this.profileService.getUserProfile(idOrUsername);
@@ -256,8 +252,8 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
-            const currentUserId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(userId, 'User ID');
+            const currentUserId = this.getAuthenticatedUserId(req);
 
             // Verify user is updating their own profile
             if (userId !== currentUserId) {
@@ -287,8 +283,8 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
-            const { page, pageSize } = getPaginationParams(req, 12);
+            this.validateRequiredParam(userId, 'User ID');
+            const { page, pageSize } = this.getPaginationParams(req, 12);
 
             const result = await this.mediaService.getProfilePictures(
                 userId,
@@ -318,9 +314,9 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
+            this.validateRequiredParam(userId, 'User ID');
 
-            const currentUserId = getAuthenticatedUserId(req);
+            const currentUserId = this.getAuthenticatedUserId(req);
 
             const { work, education, location, dateOfBirth } = req.body;
 
@@ -358,8 +354,8 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
-            const currentUserId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(userId, 'User ID');
+            const currentUserId = this.getAuthenticatedUserId(req);
 
             // Verify user is updating their own profile
             if (userId !== currentUserId) {
@@ -370,7 +366,7 @@ export class UserController {
             }
 
             const { avatar } = req.body;
-            validateRequiredBodyField(req.body, 'avatar');
+            this.validateRequiredBodyField(req.body, 'avatar');
 
             const user = await this.userService.updateAvatar(
                 userId,
@@ -395,8 +391,8 @@ export class UserController {
     ): Promise<void> => {
         try {
             const userId = req.params.id;
-            validateRequiredParam(userId, 'User ID');
-            const currentUserId = getAuthenticatedUserId(req);
+            this.validateRequiredParam(userId, 'User ID');
+            const currentUserId = this.getAuthenticatedUserId(req);
 
             // Verify user is updating their own profile
             if (userId !== currentUserId) {
@@ -407,7 +403,7 @@ export class UserController {
             }
 
             const { coverPhoto } = req.body;
-            validateRequiredBodyField(req.body, 'coverPhoto');
+            this.validateRequiredBodyField(req.body, 'coverPhoto');
 
             const profile = await this.profileService.updateProfileByUserId(
                 userId,

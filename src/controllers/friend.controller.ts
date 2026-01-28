@@ -1,8 +1,13 @@
 import { NextFunction, Request, Response } from 'express';
 import { ResponseUtil } from '../common/utils';
 import friendService from '../services/friend.service';
+import { BaseController } from './base.controller';
 
-export class FriendController {
+export class FriendController extends BaseController {
+    constructor() {
+        super();
+    }
+
     /**
      * Get friends with their conversations
      * GET /api/v1/users/:userId/friends-with-conversations
@@ -15,9 +20,8 @@ export class FriendController {
         try {
             const { userId } = req.params;
 
-            const result = await friendService.getFriendsWithConversations(
-                userId
-            );
+            const result =
+                await friendService.getFriendsWithConversations(userId);
 
             ResponseUtil.success(
                 res,
