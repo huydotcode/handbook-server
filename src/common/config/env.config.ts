@@ -45,11 +45,12 @@ const envSchema = z.object({
 
     // AI
     AI_API_KEY: z.string(),
-    AI_MODEL: z.string().default('gemini-2.0-flash-lite'),
+    AI_MODEL: z.string(),
+    AI_PROMPT: z.string(),
 
     // Resend
     RESEND_API_KEY: z.string(),
-    RESEND_FROM_EMAIL: z.string().default('onboarding@resend.dev'),
+    RESEND_FROM_EMAIL: z.string(),
 
     // Realtime Service
     REALTIME_SERVICE_URL: z.string(),
@@ -99,6 +100,7 @@ const envProcess = envSchema.safeParse({
     // AI
     AI_API_KEY: process.env.AI_API_KEY,
     AI_MODEL: process.env.AI_MODEL,
+    AI_PROMPT: process.env.AI_PROMPT,
 
     // Resend
     RESEND_API_KEY: process.env.RESEND_API_KEY,
