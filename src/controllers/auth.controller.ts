@@ -24,6 +24,12 @@ export class AuthController extends BaseController {
 
             const result = await authService.login(account, password);
 
+            // Check if user is blocked
+            if (result.user.isBlocked) {
+                ResponseUtil.error(res, 'Tài khoản của bạn đã bị khóa', 403);
+                return;
+            }
+
             // Set refresh token in httpOnly cookie
             res.cookie('handbook_refreshToken', result.refreshToken, {
                 httpOnly: true,

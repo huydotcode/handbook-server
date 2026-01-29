@@ -32,6 +32,13 @@ export default async function authMiddleware(
             return ResponseUtil.unauthorized(res, 'Unauthorized');
         }
 
+        if (decoded.isBlocked) {
+            return ResponseUtil.forbidden(
+                res,
+                'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.'
+            );
+        }
+
         req.user = decoded;
         next();
     } catch (error: any) {

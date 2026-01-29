@@ -8,4 +8,5 @@ export type JwtDecoded = {
     role: EUserRole;
     username: string;
     iat: number;
+    isBlocked?: boolean;
 };

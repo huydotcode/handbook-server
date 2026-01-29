@@ -25,6 +25,7 @@ export interface LoginResult {
         avatar: string;
         role: string;
         username: string;
+        isBlocked?: boolean;
     };
 }
 
@@ -116,6 +117,7 @@ export class AuthService {
                 avatar: user.avatar,
                 role: user.role,
                 username: user.username || '',
+                isBlocked: user.isBlocked,
             },
         };
     }
@@ -148,6 +150,7 @@ export class AuthService {
                 picture: user.avatar,
                 role: user.role,
                 username: user.username || '',
+                isBlocked: user.isBlocked,
             });
 
             return { accessToken };

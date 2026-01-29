@@ -10,6 +10,7 @@ interface Payload {
     picture: string;
     role: string;
     username: string;
+    isBlocked?: boolean;
     // iat: number;
     // exp: number;
 }
