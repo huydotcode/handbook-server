@@ -26,15 +26,25 @@ export default async function adminMiddleware(
         return ResponseUtil.internalError(res, 'Internal server error');
     }
 
-    const decoded = jwt.verify(token, secretKey) as JwtDecoded;
+    try {
+        const decoded = jwt.verify(token, secretKey) as JwtDecoded;
 
-    if (!decoded) {
-        return ResponseUtil.unauthorized(res, 'Unauthorized');
+        if (!decoded) {
+            return ResponseUtil.unauthorized(res, 'Unauthorized');
+        }
+
+        if (decoded.role !== EUserRole.ADMIN) {
+            return ResponseUtil.forbidden(res, 'Forbidden');
+        }
+
+        next();
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return ResponseUtil.unauthorized(res, 'Token expired');
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            return ResponseUtil.unauthorized(res, 'Invalid token');
+        }
+        return ResponseUtil.internalError(res, 'Token verification failed');
     }
-
-    if (decoded.role !== EUserRole.ADMIN) {
-        return ResponseUtil.forbidden(res, 'Forbidden');
-    }
-
-    next();
 }
