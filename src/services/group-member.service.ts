@@ -159,6 +159,14 @@ export class GroupMemberService extends BaseService<IGroupMemberModel> {
     }
 
     /**
+     * Get user group IDs only (optimized for queries)
+     */
+    async getUserGroupIds(userId: string): Promise<string[]> {
+        this.validateId(userId, 'User ID');
+        return await this.memberRepository.findUserGroupIds(userId);
+    }
+
+    /**
      * Check if user is member of group
      */
     async isMember(groupId: string, userId: string): Promise<boolean> {
