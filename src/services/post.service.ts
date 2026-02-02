@@ -268,8 +268,10 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
 
-        const followingIds = await this.followService.getFollowingIds(userId);
-        const friendIds = await this.friendshipService.getFriendIds(userId);
+        const [followingIds, friendIds] = await Promise.all([
+            this.followService.getFollowingIds(userId),
+            this.friendshipService.getFriendIds(userId),
+        ]);
 
         if (followingIds.length === 0 && friendIds.length === 0) {
             return {
@@ -300,6 +302,9 @@ export class PostService extends BaseService<IPostModel> {
                     option: {
                         $in: ['friends', 'public'],
                     },
+                },
+                {
+                    author: userId,
                 },
             ],
         };

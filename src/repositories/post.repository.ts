@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import { PaginationResult } from '../common/types/base';
 import { POPULATE_GROUP, POPULATE_USER } from '../common/utils/populate';
 import PostInteraction, {
@@ -85,22 +85,25 @@ export class PostRepository extends BaseRepository<IPostModel> {
      * @returns Paginated result with posts and interaction flags
      */
     public async findManyWithInteraction(
-        filter: any,
+        filter: FilterQuery<IPostModel>,
         userId: string,
         page: number,
         pageSize: number
     ): Promise<PaginationResult<IPostWithInteraction>> {
-        const posts = await this.model
-            .find(filter)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * pageSize)
-            .limit(pageSize)
-            .populate('media')
-            .populate('author', POPULATE_USER)
-            .populate(POPULATE_GROUP)
-            .lean<IPostWithInteraction[]>();
+        const skip = (page - 1) * pageSize;
 
-        const totalPosts = await this.model.countDocuments(filter);
+        const [posts, totalPosts] = await Promise.all([
+            this.model
+                .find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(pageSize)
+                .populate('media')
+                .populate('author', POPULATE_USER)
+                .populate(POPULATE_GROUP)
+                .lean<IPostWithInteraction[]>(),
+            this.model.countDocuments(filter),
+        ]);
 
         const interactions = await PostInteraction.find({
             user: userId,
@@ -124,16 +127,7 @@ export class PostRepository extends BaseRepository<IPostModel> {
         });
 
         const postsWithInteraction = posts.map((post) => ({
-            _id: post._id,
-            option: post.option,
-            text: post.text,
-            media: post.media,
-            author: post.author,
-            group: post.group,
-            commentsCount: post.commentsCount,
-            lovesCount: post.lovesCount,
-            sharesCount: post.sharesCount,
-            tags: post.tags,
+            ...post,
             userHasLoved: interactionMap
                 .get(post._id.toString())
                 ?.has(EPostInteractionType.LOVE)
