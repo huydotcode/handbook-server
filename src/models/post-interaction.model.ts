@@ -51,7 +51,6 @@ const PostInteractionSchema = new Schema<IPostInteractionModel>(
     }
 );
 
-PostInteractionSchema.index({ user: 1, post: 1, type: 1 });
 PostInteractionSchema.index({ post: 1, type: 1 });
 PostInteractionSchema.index({ createdAt: -1 });
 PostInteractionSchema.index({ type: 1 });
