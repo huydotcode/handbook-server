@@ -1,46 +1,22 @@
-import axios from 'axios';
-import { env } from '../common/config';
+import redis from '../common/utils/redis';
 
 declare global {
     var eventBusInstance: EventBusService | undefined;
 }
 
 class EventBusService {
-    private readonly realtimeUrl: string;
-    private readonly secretKey: string;
-
-    constructor() {
-        this.realtimeUrl = env.REALTIME_SERVICE_URL;
-        this.secretKey = env.INTERNAL_SECRET_KEY;
-    }
-
     /**
-     * Publish an event to a channel via HTTP
+     * Publish an event to a channel via Redis Pub/Sub
      * @param channel - Event channel name (e.g. 'message.created')
      * @param data - Event payload
      */
     async publish(channel: string, data: any): Promise<void> {
-        this.sendEvent(channel, data).catch((err) => {
-            console.error(`Failed to send event ${channel}:`, err.message);
-        });
-    }
-
-    private async sendEvent(channel: string, data: any) {
         try {
-            await axios.post(
-                `${this.realtimeUrl}/internal/events`,
-                { channel, data },
-                {
-                    headers: {
-                        'x-internal-secret': this.secretKey,
-                        'Content-Type': 'application/json',
-                    },
-                    timeout: 2000,
-                }
-            );
-            console.log(`Event sent to Realtime Server: ${channel}`);
+            const message = JSON.stringify(data);
+            await redis.publish(channel, message);
+            console.log(`Event published to Redis: ${channel}`);
         } catch (error: any) {
-            throw error;
+            console.error(`Failed to publish event ${channel}:`, error.message);
         }
     }
 
@@ -56,14 +32,14 @@ class EventBusService {
     }
 
     /**
-     * Check connection (dummy)
+     * Check connection
      */
     getConnectionStatus(): boolean {
-        return true;
+        return redis.status === 'ready';
     }
 
     /**
-     * Disconnect (noop)
+     * Disconnect (noop for singleton)
      */
     async disconnect(): Promise<void> {}
 }
