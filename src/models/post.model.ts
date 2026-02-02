@@ -120,6 +120,11 @@ PostSchema.index({ author: 1 });
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ text: 'text' });
 PostSchema.index({ tags: 'text' });
+PostSchema.index({ author: 1, option: 1, createdAt: -1 });
+PostSchema.index({ option: 1, createdAt: -1 });
+PostSchema.index({ status: 1, createdAt: -1 });
+PostSchema.index({ group: 1, createdAt: -1 });
+PostSchema.index({ type: 1, createdAt: -1 });
 
 const Post = models.Post || model<IPostModel>('Post', PostSchema);
 
