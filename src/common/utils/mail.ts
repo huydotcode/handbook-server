@@ -1,6 +1,4 @@
-import { getOtpEmailHtml } from '../emails/templates';
-import { env } from '../config';
-import { resend } from './resend';
+import { addEmailJob } from '../queues/email.queue';
 
 export enum EMailType {
     REGISTER = 'register',
@@ -12,22 +10,10 @@ export async function sendOtpEmail(
     otp: string,
     type: EMailType
 ): Promise<void> {
-    const subject =
-        type === EMailType.REGISTER
-            ? '[HANDBOOK] - OTP Đăng ký tài khoản'
-            : '[HANDBOOK] - OTP Đặt lại mật khẩu';
-
-    const html = getOtpEmailHtml(otp, type);
-
     try {
-        await resend.emails.send({
-            from: `Handbook <${env.RESEND_FROM_EMAIL}>`,
-            to,
-            subject,
-            html,
-        });
+        await addEmailJob(to, otp, type);
     } catch (error) {
-        console.error('Email sending failed:', error);
+        console.error('Email queuing failed:', error);
         throw new Error('Gửi email thất bại');
     }
 }
