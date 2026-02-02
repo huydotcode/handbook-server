@@ -376,12 +376,7 @@ export class PostService extends BaseService<IPostModel> {
         this.validateId(userId, 'User ID');
         this.validatePagination(page, pageSize);
 
-        // Get groups where user is a member
-        const userGroupMemberships =
-            await this.groupMemberService.getUserGroups(userId);
-        const groupIds = userGroupMemberships
-            .map((m) => m.group?.toString())
-            .filter((id): id is string => Boolean(id));
+        const groupIds = await this.groupMemberService.getUserGroupIds(userId);
 
         if (groupIds.length === 0) {
             return {
