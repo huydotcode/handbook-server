@@ -1,15 +1,23 @@
 import { Queue } from 'bullmq';
-import { env } from '../config/env.config';
+import redis from '../utils/redis';
 import { EMailType } from '../utils/mail';
 
-export const emailQueue = new Queue('email-sending', {
-    connection: {
-        host: env.REDIS_HOST,
-        port: Number(env.REDIS_PORT),
-        password: env.REDIS_PASSWORD,
-    },
-});
+// Lazy initialization - only create queue when first needed
+let emailQueueInstance: Queue | null = null;
+
+const getEmailQueue = (): Queue => {
+    if (!emailQueueInstance) {
+        emailQueueInstance = new Queue('email-sending', {
+            connection: redis.duplicate(),
+        });
+        console.log('[EmailQueue] Queue initialized');
+    }
+    return emailQueueInstance;
+};
 
 export const addEmailJob = (to: string, otp: string, type: EMailType) => {
-    return emailQueue.add('send-otp', { to, otp, type });
+    return getEmailQueue().add('send-otp', { to, otp, type });
 };
+
+// Export getter for queue (for graceful shutdown if needed)
+export const getQueue = () => emailQueueInstance;
