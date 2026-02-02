@@ -7,6 +7,7 @@ import PostInteraction, {
 } from '../models/post-interaction.model';
 import {
     EPostStatus,
+    EPostType,
     IPostModel,
     IPostWithInteraction,
 } from '../models/post.model';
@@ -402,6 +403,7 @@ export class PostService extends BaseService<IPostModel> {
                     $in: groupIds,
                 },
                 status: EPostStatus.ACTIVE,
+                type: EPostType.GROUP,
             },
             userId,
             page,
