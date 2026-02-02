@@ -26,6 +26,7 @@
         "axios": "^1.7.9",
         "bcrypt": "^6.0.0",
         "body-parser": "^1.20.3",
+        "bullmq": "^5.67.2",
         "cloudinary": "^2.6.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
