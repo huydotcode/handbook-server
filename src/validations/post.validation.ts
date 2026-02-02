@@ -12,6 +12,7 @@ export const createPostValidation = z.object({
         .max(MAX_FILE_COUNT, `Chỉ được chọn tối đa ${MAX_FILE_COUNT} file`)
         .optional(),
     tags: z.array(z.string().min(1, 'Tag không được để trống')).optional(),
+    group: z.string().optional(),
 });
 
 export type CreatePostValidation = z.infer<typeof createPostValidation>;
