@@ -59,17 +59,21 @@ export class PostService extends BaseService<IPostModel> {
 
         // Notify followers
         try {
-            const followers = await this.followService.getFollowerIds(userId);
-            if (followers.length > 0) {
-                await Promise.all(
-                    followers.map((followerId) =>
-                        this.notificationService.createPostNotification(
-                            userId,
-                            followerId,
-                            post._id.toString()
+            // If post is not in a group, notify followers
+            if (!data?.group) {
+                const followers =
+                    await this.followService.getFollowerIds(userId);
+                if (followers.length > 0) {
+                    await Promise.all(
+                        followers.map((followerId) =>
+                            this.notificationService.createPostNotification(
+                                userId,
+                                followerId,
+                                post._id.toString()
+                            )
                         )
-                    )
-                );
+                    );
+                }
             }
         } catch (error) {
             console.error('Error sending post notifications:', error);
