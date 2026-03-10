@@ -128,6 +128,14 @@ export class GroupMemberService extends BaseService<IGroupMemberModel> {
     }
 
     /**
+     * Get all members ID of a group
+     */
+    async getGroupMemberIds(groupId: string): Promise<string[]> {
+        this.validateId(groupId, 'Group ID');
+        return await this.memberRepository.findGroupMemberIds(groupId);
+    }
+
+    /**
      * Get group members with pagination
      */
     async getGroupMembersPaginated(

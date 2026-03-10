@@ -24,6 +24,17 @@ export class GroupMemberRepository extends BaseRepository<IGroupMemberModel> {
     }
 
     /**
+     * Find all members ID of a group
+     */
+    async findGroupMemberIds(groupId: string): Promise<string[]> {
+        const members = await this.model
+            .find({ group: new Types.ObjectId(groupId) })
+            .select('user')
+            .lean();
+        return members.map((m) => m.user.toString());
+    }
+
+    /**
      * Find a specific group member
      */
     async findGroupMember(
