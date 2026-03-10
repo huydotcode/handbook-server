@@ -1,9 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
+import { Types } from 'mongoose';
+import { ForbiddenError } from '../common/errors';
 import { ResponseUtil } from '../common/utils/response';
 import { EPostInteractionType } from '../models/post-interaction.model';
-import { EPostOption, EPostStatus } from '../models/post.model';
+import { EPostOption, EPostStatus, EPostType } from '../models/post.model';
 import {
     FriendshipService,
+    GroupMemberService,
     PostInteractionService,
     PostService,
     UploadService,
@@ -18,6 +21,7 @@ export class PostController extends BaseController {
     private postInteractionService: PostInteractionService;
     private friendshipService: FriendshipService;
     private uploadService: UploadService;
+    private groupMemberService: GroupMemberService;
 
     constructor() {
         super();
@@ -25,6 +29,7 @@ export class PostController extends BaseController {
         this.postInteractionService = new PostInteractionService();
         this.friendshipService = new FriendshipService();
         this.uploadService = new UploadService();
+        this.groupMemberService = new GroupMemberService();
     }
 
     /**
@@ -42,7 +47,20 @@ export class PostController extends BaseController {
             const files = req.files as Express.Multer.File[];
             let mediaIds: string[] = [];
 
-            // 1. Upload new files if any
+            // 1. Validate group membership if posting to a group
+            if (postData.group) {
+                const isMember = await this.groupMemberService.isMember(
+                    postData.group,
+                    userId
+                );
+                if (!isMember) {
+                    throw new ForbiddenError(
+                        'You are not a member of this group'
+                    );
+                }
+            }
+
+            // 2. Upload new files if any
             if (files && files.length > 0) {
                 const uploadedMedia = await this.uploadService.uploadFiles(
                     files.map((file) => ({
@@ -56,7 +74,7 @@ export class PostController extends BaseController {
                 mediaIds = uploadedMedia.map((media) => media._id.toString());
             }
 
-            // 2. Handle legacy/separate upload mediaIds
+            // 3. Handle separate upload mediaIds
             if (postData.mediaIds) {
                 const bodyMediaIds = Array.isArray(postData.mediaIds)
                     ? postData.mediaIds
@@ -64,16 +82,23 @@ export class PostController extends BaseController {
                 mediaIds = [...mediaIds, ...bodyMediaIds];
             }
 
-            // 3. Create post
+            // 4. Create post
             const newPost = await this.postService.createPost(
                 {
-                    ...postData,
-                    media: mediaIds,
-                    author: userId,
                     text: postData.content,
+                    option: postData.option || EPostOption.PUBLIC,
+                    tags: postData.tags || [],
+                    media: mediaIds.map((id) => new Types.ObjectId(id)),
+                    author: new Types.ObjectId(userId),
+                    group: postData.group || null,
+                    type: postData.group ? EPostType.GROUP : EPostType.DEFAULT,
+                    status: postData.group
+                        ? EPostStatus.PENDING
+                        : EPostStatus.ACTIVE,
                 },
                 userId
             );
+
             ResponseUtil.created(res, newPost, 'Post created successfully');
         } catch (error) {
             next(error);
