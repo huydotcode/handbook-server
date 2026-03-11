@@ -32,7 +32,6 @@ const morganFormat = env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat));
 
 const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [];
-console.log({ allowedOrigins });
 app.use(
     cors({
         origin: allowedOrigins,
