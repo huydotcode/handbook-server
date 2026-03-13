@@ -11,6 +11,7 @@ interface Payload {
     role: string;
     username: string;
     isBlocked?: boolean;
+    lastAccessed?: Date;
     // iat: number;
     // exp: number;
 }

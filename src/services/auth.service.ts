@@ -26,6 +26,7 @@ export interface LoginResult {
         role: string;
         username: string;
         isBlocked?: boolean;
+        lastAccessed?: Date;
     };
 }
 
@@ -101,6 +102,7 @@ export class AuthService {
             picture: user.avatar,
             role: user.role,
             username: user.username || '',
+            lastAccessed: user.lastAccessed,
         });
 
         const refreshToken = jwt.signRefreshToken({
@@ -118,6 +120,7 @@ export class AuthService {
                 role: user.role,
                 username: user.username || '',
                 isBlocked: user.isBlocked,
+                lastAccessed: user.lastAccessed,
             },
         };
     }
@@ -151,6 +154,7 @@ export class AuthService {
                 role: user.role,
                 username: user.username || '',
                 isBlocked: user.isBlocked,
+                lastAccessed: user.lastAccessed,
             });
 
             return { accessToken };
@@ -449,6 +453,7 @@ export class AuthService {
             picture: user!.avatar,
             role: user!.role,
             username: user!.username || '',
+            lastAccessed: user!.lastAccessed,
         });
 
         const refreshToken = jwt.signRefreshToken({
@@ -465,6 +470,7 @@ export class AuthService {
                 avatar: user!.avatar,
                 role: user!.role,
                 username: user!.username || '',
+                lastAccessed: user!.lastAccessed,
             },
         };
     }
