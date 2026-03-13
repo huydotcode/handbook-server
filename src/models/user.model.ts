@@ -72,7 +72,7 @@ const UserSchema = new Schema<IUserModel>(
         },
         name: {
             type: String,
-            required: true,
+            default: '',
         },
         avatar: {
             type: String,

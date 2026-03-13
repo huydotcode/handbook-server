@@ -315,20 +315,63 @@ export class AuthService {
     }
 
     /**
-     * Register a new user
+     * Check if username is available
+     * @param username - Username to check
+     */
+    async checkUsernameAvailable(
+        username: string
+    ): Promise<{ available: boolean; message: string }> {
+        if (!username) {
+            throw new ValidationError('Tên đăng nhập là bắt buộc');
+        }
+
+        const normalizedUsername = username.toLowerCase();
+        const existingUser = await this.userRepository.findOne({
+            username: normalizedUsername,
+        });
+
+        if (existingUser) {
+            return { available: false, message: 'Tên đăng nhập đã tồn tại' };
+        }
+
+        return { available: true, message: 'Tên đăng nhập hợp lệ' };
+    }
+
+    /**
+     * Register a new user with OTP verification
      * @param payload - User registration data
      */
-    async register(payload: RegisterDto): Promise<RegisterResult> {
-        const { email, username, name, password, avatar } = payload;
+    async registerWithOTP(
+        payload: RegisterDto & { otp: string }
+    ): Promise<LoginResult> {
+        const { email, username, password, otp } = payload;
 
-        if (!email || !username || !name || !password) {
+        if (!email || !username || !password || !otp) {
             throw new ValidationError(
-                'Email, tên đăng nhập, họ tên và mật khẩu là bắt buộc'
+                'Email, tên đăng nhập, mật khẩu và mã OTP là bắt buộc'
             );
         }
 
         if (password.length < 6) {
             throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
+        }
+
+        // Verify OTP
+        const otpData = await redis.get(`otp:${email.toLowerCase()}`);
+
+        if (!otpData) {
+            throw new ValidationError('OTP không hợp lệ hoặc đã hết hạn');
+        }
+
+        const { otp: storedOtp, expires } = JSON.parse(otpData);
+
+        if (Date.now() > expires) {
+            await redis.del(`otp:${email.toLowerCase()}`);
+            throw new ValidationError('OTP đã hết hạn');
+        }
+
+        if (storedOtp !== otp) {
+            throw new ValidationError('OTP không chính xác');
         }
 
         const normalizedEmail = email.toLowerCase();
@@ -342,14 +385,17 @@ export class AuthService {
             throw new ValidationError('Email hoặc tên đăng nhập đã tồn tại');
         }
 
+        // Clean up OTP
+        await redis.del(`otp:${email.toLowerCase()}`);
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = await this.userRepository.create({
             email: normalizedEmail,
             username: normalizedUsername,
-            name,
+            name: normalizedUsername, // Default name to username initially
             password: hashedPassword,
-            avatar: avatar || '/assets/img/user-profile.jpg',
+            avatar: '/assets/img/user-profile.jpg',
         });
 
         await Profile.create({
@@ -362,14 +408,32 @@ export class AuthService {
             dateOfBirth: new Date(),
         });
 
+        const accessToken = jwt.sign({
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            picture: user.avatar,
+            role: user.role,
+            username: user.username || '',
+            lastAccessed: user.lastAccessed,
+        });
+
+        const refreshToken = jwt.signRefreshToken({
+            id: user._id.toString(),
+        });
+
         return {
-            message: 'Đăng ký thành công',
+            accessToken,
+            refreshToken,
             user: {
                 id: user._id.toString(),
                 email: user.email,
                 name: user.name,
-                username: user.username,
                 avatar: user.avatar,
+                role: user.role,
+                username: user.username,
+                isBlocked: user.isBlocked,
+                lastAccessed: user.lastAccessed,
             },
         };
     }

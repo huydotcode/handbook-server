@@ -23,6 +23,11 @@ const authRoutes: IApiRoute[] = [
         },
     },
     {
+        path: '/check-username',
+        method: EApiMethod.POST,
+        controller: authController.checkUsername,
+    },
+    {
         path: '/register',
         method: EApiMethod.POST,
         controller: authController.register,

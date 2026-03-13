@@ -101,7 +101,25 @@ export class AuthController extends BaseController {
     };
 
     /**
-     * Register new user
+     * Check username available
+     * POST /api/v1/auth/check-username
+     */
+    public checkUsername = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { username } = req.body;
+            const result = await authService.checkUsernameAvailable(username);
+            ResponseUtil.success(res, result, result.message);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * Register new user with OTP
      * POST /api/v1/auth/register
      */
     public register = async (
@@ -110,9 +128,21 @@ export class AuthController extends BaseController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const result = await authService.register(req.body);
+            const result = await authService.registerWithOTP(req.body);
 
-            ResponseUtil.success(res, result.user, result.message);
+            // Set refresh token in httpOnly cookie
+            res.cookie('handbook_refreshToken', result.refreshToken, {
+                httpOnly: true,
+                secure: env.NODE_ENV === 'production',
+                sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            });
+
+            ResponseUtil.success(
+                res,
+                { accessToken: result.accessToken, user: result.user },
+                'Đăng ký và đăng nhập thành công'
+            );
         } catch (error) {
             next(error);
         }
