@@ -63,6 +63,7 @@ export class RealtimeController extends BaseController {
                 _id: user._id,
                 name: user.name,
                 avatar: user.avatar,
+                lastAccessed: user.lastAccessed,
             });
         } catch (error) {
             console.error('Error in getUserDetails:', error);
