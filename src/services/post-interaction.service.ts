@@ -10,6 +10,7 @@ import { BaseService } from './base.service';
 import { eventService } from './event.service';
 import { NotificationService } from './notification.service';
 import { ENotificationType } from '../models/notification.model';
+import { POPULATE_USER, POPULATE_USER_ONLINE } from '../common/utils';
 
 export class PostInteractionService extends BaseService<IPostInteractionModel> {
     private postInteractionRepository: PostInteractionRepository;
@@ -122,7 +123,11 @@ export class PostInteractionService extends BaseService<IPostInteractionModel> {
                                         isRead: false,
                                         isDeleted: false,
                                     },
-                                    userId
+                                    userId,
+                                    {
+                                        path: 'sender',
+                                        select: POPULATE_USER,
+                                    }
                                 );
 
                             // Publish event for real-time broadcasting
