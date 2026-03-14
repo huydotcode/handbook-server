@@ -1,4 +1,3 @@
-import { Types } from 'mongoose';
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { PaginationResult } from '../common/types/base';
@@ -6,6 +5,7 @@ import PostInteraction, {
     EPostInteractionType,
 } from '../models/post-interaction.model';
 import {
+    EPostOption,
     EPostStatus,
     EPostType,
     IPostModel,
@@ -278,34 +278,26 @@ export class PostService extends BaseService<IPostModel> {
             this.friendshipService.getFriendIds(userId),
         ]);
 
-        if (followingIds.length === 0 && friendIds.length === 0) {
-            return {
-                data: [],
-                pagination: {
-                    page,
-                    pageSize,
-                    total: 0,
-                    totalPages: 0,
-                    hasNext: false,
-                    hasPrev: false,
-                },
-            };
-        }
-
         const filters = {
             $or: [
                 {
                     author: {
                         $in: followingIds,
                     },
-                    option: 'public',
+                    option: EPostOption.PUBLIC,
                 },
                 {
                     author: {
                         $in: friendIds,
                     },
                     option: {
-                        $in: ['friends', 'public'],
+                        $in: [EPostOption.FRIEND, EPostOption.PUBLIC],
+                    },
+                },
+                {
+                    group: null,
+                    option: {
+                        $in: [EPostOption.PUBLIC],
                     },
                 },
                 {
