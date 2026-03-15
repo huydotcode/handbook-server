@@ -3,7 +3,7 @@ import { EMailType } from '../common/utils/mail';
 
 // Sign up validation
 export const signUpValidation = z.object({
-    email: z.string().email('Email không hợp lệ'),
+    email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
     username: z
         .string()
         .min(6, 'Username là chuỗi từ 6-50 kí tự')
@@ -16,7 +16,7 @@ export const signUpValidation = z.object({
         .string()
         .min(6, 'Mật khẩu từ 6-50 kí tự')
         .max(50, 'Mật khẩu từ 6-50 kí tự'),
-    otp: z.string().min(6, 'OTP phải có 6 chữ số'),
+    otp: z.string().min(6, 'OTP phải có 6 chữ số').optional().or(z.literal('')),
 });
 
 export type SignUpValidation = z.infer<typeof signUpValidation>;

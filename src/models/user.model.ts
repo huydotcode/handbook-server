@@ -11,7 +11,7 @@ import {
 
 export interface IUserModel extends Document {
     _id: string;
-    email: string;
+    email?: string;
     username: string;
     name: string;
     avatar: string;
@@ -33,7 +33,7 @@ export interface IUserModel extends Document {
 }
 
 export interface IUserInput {
-    email: string;
+    email?: string;
     username: string;
     name: string;
     avatar: string;
@@ -62,8 +62,8 @@ const UserSchema = new Schema<IUserModel>(
     {
         email: {
             type: String,
-            required: true,
             unique: true,
+            sparse: true,
         },
         username: {
             type: String,

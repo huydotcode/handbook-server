@@ -35,9 +35,9 @@ export interface SendOTPResult {
 }
 
 export interface RegisterDto {
-    email: string;
+    email?: string;
     username: string;
-    name: string;
+    name?: string;
     password: string;
     avatar?: string;
 }
@@ -97,7 +97,7 @@ export class AuthService {
 
         const accessToken = jwt.sign({
             id: user._id.toString(),
-            email: user.email,
+            email: user.email || '',
             name: user.name,
             picture: user.avatar,
             role: user.role,
@@ -114,7 +114,7 @@ export class AuthService {
             refreshToken,
             user: {
                 id: user._id.toString(),
-                email: user.email,
+                email: user.email || '',
                 name: user.name,
                 avatar: user.avatar,
                 role: user.role,
@@ -148,7 +148,7 @@ export class AuthService {
             // Generate new access token
             const accessToken = jwt.sign({
                 id: user._id.toString(),
-                email: user.email,
+                email: user.email || '',
                 name: user.name,
                 picture: user.avatar,
                 role: user.role,
@@ -338,65 +338,85 @@ export class AuthService {
     }
 
     /**
-     * Register a new user with OTP verification
+     * Register a new user with OTP verification (optional)
      * @param payload - User registration data
      */
     async registerWithOTP(
-        payload: RegisterDto & { otp: string }
+        payload: RegisterDto & { otp?: string }
     ): Promise<LoginResult> {
         const { email, username, password, otp } = payload;
 
-        if (!email || !username || !password || !otp) {
-            throw new ValidationError(
-                'Email, tên đăng nhập, mật khẩu và mã OTP là bắt buộc'
-            );
+        if (!username || !password) {
+            throw new ValidationError('Tên đăng nhập và mật khẩu là bắt buộc');
         }
 
         if (password.length < 6) {
             throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
         }
 
-        // Verify OTP
-        const otpData = await redis.get(`otp:${email.toLowerCase()}`);
-
-        if (!otpData) {
-            throw new ValidationError('OTP không hợp lệ hoặc đã hết hạn');
-        }
-
-        const { otp: storedOtp, expires } = JSON.parse(otpData);
-
-        if (Date.now() > expires) {
-            await redis.del(`otp:${email.toLowerCase()}`);
-            throw new ValidationError('OTP đã hết hạn');
-        }
-
-        if (storedOtp !== otp) {
-            throw new ValidationError('OTP không chính xác');
-        }
-
-        const normalizedEmail = email.toLowerCase();
         const normalizedUsername = username.toLowerCase();
+        let normalizedEmail: string | undefined = undefined;
+
+        if (email) {
+            normalizedEmail = email.toLowerCase();
+            if (!otp) {
+                throw new ValidationError('Mã OTP là bắt buộc khi nhập email');
+            }
+
+            // Verify OTP
+            const otpData = await redis.get(`otp:${normalizedEmail}`);
+
+            if (!otpData) {
+                throw new ValidationError('OTP không hợp lệ hoặc đã hết hạn');
+            }
+
+            const { otp: storedOtp, expires } = JSON.parse(otpData);
+
+            if (Date.now() > expires) {
+                await redis.del(`otp:${normalizedEmail}`);
+                throw new ValidationError('OTP đã hết hạn');
+            }
+
+            if (storedOtp !== otp) {
+                throw new ValidationError('OTP không chính xác');
+            }
+
+            // Clean up OTP
+            await redis.del(`otp:${normalizedEmail}`);
+        }
+
+        // Prepare $or condition depending on whether email is provided
+        const checkConditions: any[] = [{ username: normalizedUsername }];
+        if (normalizedEmail) {
+            checkConditions.push({ email: normalizedEmail });
+        }
 
         const existingUser = await this.userRepository.findOne({
-            $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
+            $or: checkConditions,
         });
 
         if (existingUser) {
-            throw new ValidationError('Email hoặc tên đăng nhập đã tồn tại');
+            throw new ValidationError(
+                'Tên đăng nhập' +
+                    (normalizedEmail ? ' hoặc email' : '') +
+                    ' đã tồn tại'
+            );
         }
-
-        // Clean up OTP
-        await redis.del(`otp:${email.toLowerCase()}`);
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await this.userRepository.create({
-            email: normalizedEmail,
+        const userDataToSave: any = {
             username: normalizedUsername,
             name: normalizedUsername, // Default name to username initially
             password: hashedPassword,
             avatar: '/assets/img/user-profile.jpg',
-        });
+        };
+
+        if (normalizedEmail) {
+            userDataToSave.email = normalizedEmail;
+        }
+
+        const user = await this.userRepository.create(userDataToSave);
 
         await Profile.create({
             user: user._id,
@@ -410,7 +430,7 @@ export class AuthService {
 
         const accessToken = jwt.sign({
             id: user._id.toString(),
-            email: user.email,
+            email: user.email || '',
             name: user.name,
             picture: user.avatar,
             role: user.role,
@@ -427,7 +447,7 @@ export class AuthService {
             refreshToken,
             user: {
                 id: user._id.toString(),
-                email: user.email,
+                email: user.email || '',
                 name: user.name,
                 avatar: user.avatar,
                 role: user.role,
@@ -512,7 +532,7 @@ export class AuthService {
 
         const accessToken = jwt.sign({
             id: user!._id.toString(),
-            email: user!.email,
+            email: user!.email || '',
             name: user!.name,
             picture: user!.avatar,
             role: user!.role,
@@ -529,7 +549,7 @@ export class AuthService {
             refreshToken,
             user: {
                 id: user!._id.toString(),
-                email: user!.email,
+                email: user!.email || '',
                 name: user!.name,
                 avatar: user!.avatar,
                 role: user!.role,
