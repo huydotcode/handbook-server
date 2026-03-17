@@ -39,16 +39,7 @@ export class AIService {
 
         this.genAI = new GoogleGenerativeAI(apiKey);
         this.modelName = env.AI_MODEL;
-        this.history = [
-            {
-                role: 'user',
-                parts: [
-                    {
-                        text: env.AI_PROMPT,
-                    },
-                ],
-            },
-        ];
+        this.history = [];
     }
 
     public async sendMessage(message: string) {
@@ -59,6 +50,7 @@ export class AIService {
         try {
             const model = this.genAI.getGenerativeModel({
                 model: this.modelName,
+                systemInstruction: env.AI_PROMPT,
             });
 
             const chat = model.startChat({
