@@ -9,6 +9,13 @@ const friendshipController = new FriendshipController();
 const friendshipRoutes: IApiRoute[] = [
     // Specific routes first
     {
+        path: '/suggestions',
+        method: EApiMethod.GET,
+        controller: friendshipController.getFriendSuggestions,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/:userId/count',
         method: EApiMethod.GET,
         controller: friendshipController.getFriendsCount,

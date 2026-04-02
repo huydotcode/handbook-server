@@ -1,7 +1,10 @@
 import { HTTP_STATUS } from '../common/constants/status-code';
 import { AppError, NotFoundError } from '../common/errors/app.error';
 import { IFriendshipModel } from '../models/friendship.model';
+import { ENotificationType } from '../models/notification.model';
 import { FriendshipRepository } from '../repositories/friendship.repository';
+import { NotificationRepository } from '../repositories/notification.repository';
+import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
 
 /**
@@ -9,11 +12,15 @@ import { BaseService } from './base.service';
  */
 export class FriendshipService extends BaseService<IFriendshipModel> {
     private friendshipRepository: FriendshipRepository;
+    private userRepository: UserRepository;
+    private notificationRepository: NotificationRepository;
 
     constructor() {
         const repository = new FriendshipRepository();
         super(repository);
         this.friendshipRepository = repository;
+        this.userRepository = new UserRepository();
+        this.notificationRepository = new NotificationRepository();
     }
 
     /**
@@ -139,5 +146,48 @@ export class FriendshipService extends BaseService<IFriendshipModel> {
             userId1,
             userId2
         );
+    }
+
+    /**
+     * Get friend suggestions for a user
+     * @param userId - User ID
+     * @param limit - Maximum number of suggestions to return
+     * @returns Array of suggested users
+     */
+    async getFriendSuggestions(userId: string, limit: number = 5) {
+        this.validateId(userId, 'User ID');
+
+        // Get IDs of current friends
+        const friendIds = await this.friendshipRepository.getFriendIds(userId);
+
+        // Get IDs of users with pending friend requests (both sent and received)
+        const sentRequests = await this.notificationRepository.findMany({
+            sender: userId,
+            type: ENotificationType.REQUEST_ADD_FRIEND,
+            isDeleted: false,
+        });
+        const receivedRequests = await this.notificationRepository.findMany({
+            receiver: userId,
+            type: ENotificationType.REQUEST_ADD_FRIEND,
+            isDeleted: false,
+        });
+
+        const pendingIds = [
+            ...sentRequests.map((n: any) => n.receiver.toString()),
+            ...receivedRequests.map((n: any) => n.sender.toString()),
+        ];
+
+        // Exclude self, current friends, and pending request users
+        const excludeIds = [...new Set([...friendIds, userId, ...pendingIds])];
+
+        // Fetch paginated using UserRepository, taking newest active users
+        const result = await this.userRepository.findPaginated(
+            1,
+            limit,
+            { _id: { $nin: excludeIds } },
+            { createdAt: -1 }
+        );
+
+        return result.data;
     }
 }

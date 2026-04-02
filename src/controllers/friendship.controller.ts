@@ -179,4 +179,33 @@ export class FriendshipController extends BaseController {
             next(error);
         }
     };
+
+    /**
+     * GET /api/v1/friendships/suggestions
+     * Get friend suggestions for the authenticated user.
+     */
+    public getFriendSuggestions = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = this.getAuthenticatedUserId(req);
+            const limit = parseInt(req.query.limit as string) || 5;
+
+            const suggestions =
+                await this.friendshipService.getFriendSuggestions(
+                    userId,
+                    limit
+                );
+
+            ResponseUtil.success(
+                res,
+                suggestions,
+                'Friend suggestions retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
 }
