@@ -110,7 +110,7 @@ export class GroupService extends BaseService<IGroupModel> {
             );
         }
 
-        return group;
+        return await this.getGroupByIdWithDetails(group._id.toString());
     }
 
     /**
@@ -298,9 +298,8 @@ export class GroupService extends BaseService<IGroupModel> {
      */
     async getJoinedGroups(userId: string) {
         this.validateId(userId, 'User ID');
-        const memberships = await this.groupMemberRepository.findUserGroups(
-            userId
-        );
+        const memberships =
+            await this.groupMemberRepository.findUserGroups(userId);
         // Map to groups; repository populated 'group'
         const groups = memberships
             .map((m) => (m as any).group)
