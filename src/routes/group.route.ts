@@ -70,6 +70,13 @@ const groupRoutes: IApiRoute[] = [
         isRateLimited: true,
     },
     {
+        path: '/:id/invite',
+        method: EApiMethod.POST,
+        controller: groupController.inviteFriends,
+        isPrivateRoute: true,
+        isRateLimited: true,
+    },
+    {
         path: '/recommended',
         method: EApiMethod.GET,
         controller: groupController.getRecommendedGroups,

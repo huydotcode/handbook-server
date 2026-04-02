@@ -448,4 +448,32 @@ export class GroupController extends BaseController {
             next(error);
         }
     };
+
+    /**
+     * POST /api/v1/groups/:id/invite
+     * Invite friends to a group.
+     */
+    public inviteFriends = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.id;
+            this.validateRequiredParam(groupId, 'Group ID');
+            const userId = this.getAuthenticatedUserId(req);
+            const { userIds } = req.body as { userIds: string[] };
+            this.validateRequiredBodyField(req.body, 'userIds');
+
+            const result = await this.groupService.inviteFriends(
+                groupId,
+                userIds,
+                userId
+            );
+
+            ResponseUtil.success(res, result, 'Invited friends successfully');
+        } catch (error) {
+            next(error);
+        }
+    };
 }

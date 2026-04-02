@@ -8,6 +8,8 @@ import { GroupMemberRepository } from '../repositories/group-member.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { BaseService } from './base.service';
 import { GroupMemberService } from './group-member.service';
+import { NotificationService } from './notification.service';
+import { ENotificationType } from '../models/notification.model';
 
 /**
  * Service handling business logic for groups.
@@ -17,6 +19,7 @@ export class GroupService extends BaseService<IGroupModel> {
     private groupMemberRepository: GroupMemberRepository;
     private groupMemberService: GroupMemberService;
     private userRepository: UserRepository;
+    private notificationService: NotificationService;
 
     constructor() {
         const repository = new GroupRepository();
@@ -25,6 +28,7 @@ export class GroupService extends BaseService<IGroupModel> {
         this.groupMemberRepository = new GroupMemberRepository();
         this.groupMemberService = new GroupMemberService();
         this.userRepository = new UserRepository();
+        this.notificationService = new NotificationService();
     }
 
     /**
@@ -613,5 +617,56 @@ export class GroupService extends BaseService<IGroupModel> {
             currentPage,
             currentPageSize
         );
+    }
+
+    /**
+     * Invite friends to a group
+     * @param groupId - Group ID
+     * @param userIds - Array of User IDs to invite
+     * @param fromUserId - User ID sending invites
+     */
+    async inviteFriends(groupId: string, userIds: string[], fromUserId: string) {
+        this.validateId(groupId, 'Group ID');
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            throw new AppError('Phải chọn ít nhất một người bạn để mời', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        const group = await this.getByIdOrThrow(groupId);
+
+        if (group.type === 'private') {
+            const creatorId = typeof group.creator === 'string' ? group.creator : group.creator.toString();
+            const isAdminOrCreator = (creatorId === fromUserId); // Simplified logic as per your request
+            // If you want actual admins to invite as well, we would check member.role
+            if (!isAdminOrCreator) {
+                // Also check if admin
+                const member = await this.groupMemberService.getMember(groupId, fromUserId);
+                if (!member || member.role !== EGroupUserRole.ADMIN) {
+                    throw new AppError('Nhóm này là nhóm riêng tư, chỉ có Quản trị viên hoặc Trưởng nhóm mới được mời thêm thành viên.', HTTP_STATUS.FORBIDDEN);
+                }
+            }
+        } else {
+            const isMember = await this.groupMemberService.isMember(groupId, fromUserId);
+            if (!isMember) {
+                throw new AppError('Bạn không phải là thành viên của nhóm này', HTTP_STATUS.FORBIDDEN);
+            }
+        }
+
+        const notifications = [];
+        for (const userId of userIds) {
+            this.validateId(userId, 'User ID');
+            if (userId === fromUserId) continue;
+            
+            const isAlreadyMember = await this.groupMemberService.isMember(groupId, userId);
+            if (isAlreadyMember) continue;
+
+            const notif = await this.notificationService.createNotification({
+                receiver: new Types.ObjectId(userId),
+                type: ENotificationType.INVITE_GROUP,
+                extra: { groupId: new Types.ObjectId(groupId) }
+            }, fromUserId);
+            notifications.push(notif);
+        }
+
+        return { success: true, count: notifications.length };
     }
 }
