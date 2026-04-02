@@ -3,6 +3,8 @@ import { EMailType } from '../common/utils/mail';
 
 // Sign up validation
 export const signUpValidation = z.object({
+    familyName: z.string().min(1, 'Họ là bắt buộc').max(50, 'Họ không quá 50 kí tự'),
+    givenName: z.string().min(1, 'Tên là bắt buộc').max(50, 'Tên không quá 50 kí tự'),
     email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
     username: z
         .string()

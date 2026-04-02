@@ -38,6 +38,8 @@ export interface RegisterDto {
     email?: string;
     username: string;
     name?: string;
+    givenName: string;
+    familyName: string;
     password: string;
     avatar?: string;
 }
@@ -344,7 +346,7 @@ export class AuthService {
     async registerWithOTP(
         payload: RegisterDto & { otp?: string }
     ): Promise<LoginResult> {
-        const { email, username, password, otp } = payload;
+        const { email, username, password, otp, givenName, familyName } = payload;
 
         if (!username || !password) {
             throw new ValidationError('Tên đăng nhập và mật khẩu là bắt buộc');
@@ -405,9 +407,13 @@ export class AuthService {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        const name = `${familyName} ${givenName}`.trim();
+
         const userDataToSave: any = {
             username: normalizedUsername,
-            name: normalizedUsername, // Default name to username initially
+            name: name || normalizedUsername, // Default name to username initially
+            givenName,
+            familyName,
             password: hashedPassword,
             avatar: '/assets/img/user-profile.jpg',
         };
