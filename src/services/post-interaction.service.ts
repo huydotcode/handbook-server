@@ -38,6 +38,18 @@ export class PostInteractionService extends BaseService<IPostInteractionModel> {
         // Set user from userId
         data.user = userId;
 
+        // Check if interaction already exists to avoid unique constraint error
+        const existingInteraction =
+            await this.postInteractionRepository.findOne({
+                user: userId,
+                post: data.post,
+                type: data.type,
+            });
+
+        if (existingInteraction) {
+            return existingInteraction;
+        }
+
         return await this.create(data, userId);
     }
 
