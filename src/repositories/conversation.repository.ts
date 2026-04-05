@@ -56,10 +56,6 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                     path: 'group',
                     populate: [
                         { path: 'avatar' },
-                        {
-                            path: 'members.user',
-                            select: 'name username avatar',
-                        },
                         { path: 'creator', select: 'name username avatar' },
                     ],
                 })
@@ -110,7 +106,6 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                 path: 'group',
                 populate: [
                     { path: 'avatar' },
-                    { path: 'members.user', select: 'name username avatar' },
                     { path: 'creator', select: 'name username avatar' },
                 ],
             })
@@ -272,10 +267,6 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                     path: 'group',
                     populate: [
                         { path: 'avatar' },
-                        {
-                            path: 'members.user',
-                            select: 'name username avatar',
-                        },
                         { path: 'creator', select: 'name username avatar' },
                     ],
                 })
@@ -395,10 +386,6 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                 path: 'group',
                 populate: [
                     { path: 'avatar' },
-                    {
-                        path: 'members.user',
-                        select: 'name username avatar',
-                    },
                     { path: 'creator', select: 'name username avatar' },
                 ],
             })
@@ -450,10 +437,6 @@ export class ConversationRepository extends BaseRepository<IConversationModel> {
                     path: 'group',
                     populate: [
                         { path: 'avatar' },
-                        {
-                            path: 'members.user',
-                            select: 'name username avatar',
-                        },
                         { path: 'creator', select: 'name username avatar' },
                     ],
                 })
