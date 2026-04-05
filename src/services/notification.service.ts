@@ -528,6 +528,58 @@ export class NotificationService extends BaseService<INotificationModel> {
     }
 
     /**
+     * Create group invitation notification
+     * @param senderId - Sender ID (inviter)
+     * @param receiverId - Receiver ID (invited user)
+     * @param groupId - Group ID
+     * @returns Created notification
+     */
+    async createInviteGroupNotification(
+        senderId: string,
+        receiverId: string,
+        groupId: string
+    ) {
+        this.validateId(senderId, 'Sender ID');
+        this.validateId(receiverId, 'Receiver ID');
+        this.validateId(groupId, 'Group ID');
+
+        if (senderId === receiverId) {
+            return null;
+        }
+
+        // Check if notification already exists to avoid spamming
+        const existingNotification = await this.notificationRepository.findOne({
+            sender: senderId,
+            receiver: receiverId,
+            type: ENotificationType.INVITE_GROUP,
+            'extra.groupId': new Types.ObjectId(groupId),
+            isDeleted: false,
+        });
+
+        if (existingNotification) {
+            return existingNotification;
+        }
+
+        return await this.create(
+            {
+                sender: new Types.ObjectId(senderId),
+                receiver: new Types.ObjectId(receiverId),
+                type: ENotificationType.INVITE_GROUP,
+                extra: {
+                    groupId: new Types.ObjectId(groupId),
+                },
+                isRead: false,
+                isDeleted: false,
+            },
+            senderId,
+            {
+                path: 'sender',
+                select: POPULATE_USER,
+            }
+        );
+    }
+
+    /**
      * Accept friend request
      * @param notificationId - Notification ID
      * @param userId - User ID accepting the request

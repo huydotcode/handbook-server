@@ -659,11 +659,11 @@ export class GroupService extends BaseService<IGroupModel> {
             const isAlreadyMember = await this.groupMemberService.isMember(groupId, userId);
             if (isAlreadyMember) continue;
 
-            const notif = await this.notificationService.createNotification({
-                receiver: new Types.ObjectId(userId),
-                type: ENotificationType.INVITE_GROUP,
-                extra: { groupId: new Types.ObjectId(groupId) }
-            }, fromUserId);
+            const notif = await this.notificationService.createInviteGroupNotification(
+                fromUserId,
+                userId,
+                groupId
+            );
             notifications.push(notif);
         }
 
