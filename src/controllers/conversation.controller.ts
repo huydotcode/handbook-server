@@ -412,4 +412,40 @@ export class ConversationController extends BaseController {
             next(error);
         }
     };
+
+    /**
+     * GET /api/v1/conversations/group/:groupId
+     * Get conversation by group ID
+     */
+    public getConversationByGroupId = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const groupId = req.params.groupId;
+            this.validateRequiredParam(groupId, 'Group ID');
+
+            const result =
+                await this.conversationService.getConversationsByGroup(
+                    groupId,
+                    { page: 1, pageSize: 1 }
+                );
+
+            if (result.data && result.data.length === 0) {
+                return ResponseUtil.notFound(
+                    res,
+                    'Conversation not found for this group'
+                );
+            }
+
+            ResponseUtil.success(
+                res,
+                result.data[0],
+                'Conversation retrieved successfully'
+            );
+        } catch (error) {
+            next(error);
+        }
+    };
 }
