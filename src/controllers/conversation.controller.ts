@@ -415,9 +415,9 @@ export class ConversationController extends BaseController {
 
     /**
      * GET /api/v1/conversations/group/:groupId
-     * Get conversation by group ID
+     * Get conversations by group ID
      */
-    public getConversationByGroupId = async (
+    public getConversationsByGroupId = async (
         req: Request,
         res: Response,
         next: NextFunction
@@ -429,7 +429,7 @@ export class ConversationController extends BaseController {
             const result =
                 await this.conversationService.getConversationsByGroup(
                     groupId,
-                    { page: 1, pageSize: 1 }
+                    { page: 1, pageSize: 10 }
                 );
 
             if (result.data && result.data.length === 0) {
@@ -441,7 +441,7 @@ export class ConversationController extends BaseController {
 
             ResponseUtil.success(
                 res,
-                result.data[0],
+                result.data,
                 'Conversation retrieved successfully'
             );
         } catch (error) {
